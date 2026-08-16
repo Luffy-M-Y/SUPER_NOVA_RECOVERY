@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>SUPER NOVA RECOVERY</title>
+<HTA:APPLICATION
+    ID="SuperNovaRecovery"
+    APPLICATIONNAME="SuperNovaRecovery"
+    BORDER="thin"
+    BORDERSTYLE="normal"
+    CAPTION="yes"
+    MAXIMIZEBUTTON="no"
+    MINIMIZEBUTTON="no"
+    SHOWINTASKBAR="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes"
+    WINDOWSTATE="normal"
+    SCROLL="no"
+/>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #0a0e1a;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+#app {
+    width: 520px;
+    background: #111827;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 36px 40px;
+    box-shadow: 0 0 40px rgba(58, 123, 213, 0.15);
+}
+
+.logo {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.logo h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #3a7bd5;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.logo p {
+    font-size: 12px;
+    color: #4a5568;
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Écrans */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Status box */
+.status-box {
+    background: #0d1526;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 1.8;
+    min-height: 80px;
+}
+
+.status-box .label {
+    color: #4a5568;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.found { color: #48bb78; }
+.error { color: #fc8181; }
+.warn  { color: #f6ad55; }
+.info  { color: #63b3ed; }
+
+/* Boutons */
+.btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary { background: #3a7bd5; color: #fff; }
+.btn-danger  { background: #c53030; color: #fff; }
+.btn-ghost   { background: transparent; color: #4a5568; border: 1px solid #1e3a5f; margin-top: 10px; }
+
+/* Compte list */
+.account-item {
+    background: #0d1526;
+    border: 1px solid #1e3a5f;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    font-size: 13px;
+}
+
+.account-item:hover { border-color: #3a7bd5; }
+.account-item.selected { border-color: #3a7bd5; background: #0f1f3d; }
+
+.account-item .acc-name { font-weight: 600; color: #e0e0e0; }
+.account-item .acc-type { font-size: 11px; color: #4a5568; margin-top: 2px; }
+
+/* Warning */
+.warning-box {
+    background: #1a1200;
+    border: 1px solid #744210;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #f6ad55;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+/* Steps (écran résultat) */
+.steps {
+    background: #0d1526;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    line-height: 2;
+    color: #a0aec0;
+}
+
+.steps .step-done { color: #48bb78; }
+.steps .step-title { color: #e0e0e0; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid #1e3a5f;
+    border-top-color: #3a7bd5;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.section-title {
+    font-size: 11px;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+    <div class="logo">
+        <h1>⚡ SUPER NOVA RECOVERY</h1>
+        <p>Réinitialisation de mot de passe Windows</p>
+    </div>
+
+    <!-- ÉCRAN 1 : Détection -->
+    <div id="screen-detect" class="screen active">
+        <div class="status-box">
+            <div class="label">Statut de détection</div>
+            <div id="detect-status" class="info">
+                <span class="spinner"></span> Recherche de la partition Windows...
+            </div>
+        </div>
+        <button class="btn btn-primary" id="btn-detect" onclick="detectWindows()" disabled>
+            Analyser les disques
+        </button>
+    </div>
+
+    <!-- ÉCRAN 2 : Sélection du compte -->
+    <div id="screen-accounts" class="screen">
+        <div class="section-title">Comptes détectés sur <span id="drive-label"></span></div>
+        <div id="accounts-list"></div>
+        <div class="warning-box">
+            ⚠️ Fonctionne uniquement avec les comptes locaux.<br>
+            Compte Microsoft (@outlook, @hotmail) → <strong>account.live.com</strong>
+        </div>
+        <button class="btn btn-danger" id="btn-reset" onclick="confirmReset()" disabled>
+            🔑 Réinitialiser le mot de passe
+        </button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-detect')">← Retour</button>
+    </div>
+
+    <!-- ÉCRAN 3 : Confirmation -->
+    <div id="screen-confirm" class="screen">
+        <div class="status-box">
+            <div class="label">Compte sélectionné</div>
+            <div id="confirm-account" style="font-size:15px; font-weight:600; color:#e0e0e0;"></div>
+            <div id="confirm-type" style="font-size:12px; color:#4a5568; margin-top:4px;"></div>
+        </div>
+        <div class="warning-box">
+            ⚠️ Cette opération va modifier des fichiers système Windows.<br>
+            Assurez-vous d'avoir l'autorisation d'accéder à ce PC.
+        </div>
+        <button class="btn btn-danger" onclick="executeReset()">
+            ✓ Confirmer la réinitialisation
+        </button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-accounts')">← Annuler</button>
+    </div>
+
+    <!-- ÉCRAN 4 : Résultat -->
+    <div id="screen-result" class="screen">
+        <div class="status-box" id="result-status"></div>
+        <div class="steps" id="result-steps"></div>
+        <button class="btn btn-primary" onclick="reboot()">↺ Redémarrer le PC</button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-detect')">Recommencer</button>
+    </div>
+</div>
+
+<script language="VBScript">
+' ─── Exécution de commandes système ───────────────────────────────────────────
+Function RunCmd(cmd)
+    Dim shell
+    Set shell = CreateObject("WScript.Shell")
+    RunCmd = shell.Run("cmd.exe /c " & cmd, 0, True)
+End Function
+
+Function RunCmdOutput(cmd)
+    Dim shell, exec, output
+    Set shell = CreateObject("WScript.Shell")
+    Set exec = shell.Exec("cmd.exe /c " & cmd)
+    output = exec.StdOut.ReadAll()
+    RunCmdOutput = output
+End Function
+
+Function FileExists(path)
+    Dim fso
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    FileExists = fso.FileExists(path)
+End Function
+
+Function FolderExists(path)
+    Dim fso
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    FolderExists = fso.FolderExists(path)
+End Function
+
+' ─── Détection de la partition Windows ────────────────────────────────────────
+Function FindWindowsDrive()
+    Dim drives, d
+    drives = Array("C", "D", "E", "F", "G", "H", "I")
+    For Each d In drives
+        If FileExists(d & ":\Windows\System32\config\SAM") Then
+            FindWindowsDrive = d
+            Exit Function
+        End If
+    Next
+    FindWindowsDrive = ""
+End Function
+
+' ─── Lister les comptes depuis le registre SAM hors-ligne ─────────────────────
+Function GetAccounts(winDrive)
+    Dim result, output, lines, i, acc
+    
+    ' Charger le SAM hors-ligne
+    RunCmd "reg load HKLM\OFFLINE_SAM """ & winDrive & ":\Windows\System32\config\SAM"""
+    
+    ' Lister les noms de comptes
+    output = RunCmdOutput("reg query ""HKLM\OFFLINE_SAM\SAM\Domains\Account\Users\Names""")
+    
+    lines = Split(output, vbCrLf)
+    Dim accounts()
+    Dim count : count = 0
+    
+    For i = 0 To UBound(lines)
+        Dim line : line = Trim(lines(i))
+        If Left(line, 4) = "HKLM" Then
+            ' Extraire le nom du compte (dernière partie du chemin)
+            Dim parts : parts = Split(line, "\")
+            acc = parts(UBound(parts))
+            If acc <> "" And acc <> "Names" Then
+                ReDim Preserve accounts(count)
+                accounts(count) = acc
+                count = count + 1
+            End If
+        End If
+    Next
+    
+    ' Décharger le SAM
+    RunCmd "reg unload HKLM\OFFLINE_SAM"
+    
+    GetAccounts = accounts
+End Function
+
+' ─── Vérifier si BitLocker est actif ──────────────────────────────────────────
+Function IsBitLockerActive(winDrive)
+    Dim output
+    output = RunCmdOutput("manage-bde -status " & winDrive & ":")
+    IsBitLockerActive = (InStr(output, "Protection On") > 0)
+End Function
+</script>
+
+<script language="JavaScript">
+var selectedAccount = "";
+var windowsDrive = "";
+var accounts = [];
+
+// ─── Navigation entre écrans ──────────────────────────────────────────────────
+function showScreen(id) {
+    var screens = document.querySelectorAll(".screen");
+    for (var i = 0; i < screens.length; i++) {
+        screens[i].className = "screen";
+    }
+    document.getElementById(id).className = "screen active";
+}
+
+// ─── Détection au chargement ──────────────────────────────────────────────────
+window.onload = function() {
+    setTimeout(detectWindows, 500);
+};
+
+function detectWindows() {
+    var statusEl = document.getElementById("detect-status");
+    statusEl.innerHTML = '<span class="spinner"></span> Recherche en cours...';
+
+    setTimeout(function() {
+        try {
+            // Vérifier BitLocker d'abord
+            var drive = FindWindowsDrive();
+
+            if (drive === "") {
+                statusEl.innerHTML = '<span class="error">✗ Partition Windows introuvable.</span><br>' +
+                    '<span style="font-size:12px;color:#4a5568;">Vérifiez que le disque dur est bien connecté.</span>';
+                return;
+            }
+
+            windowsDrive = drive;
+
+            if (IsBitLockerActive(drive)) {
+                statusEl.innerHTML = '<span class="warn">⚠ BitLocker détecté sur ' + drive + ':\\</span><br>' +
+                    '<span style="font-size:12px;color:#4a5568;">Fournissez la clé de récupération BitLocker pour continuer.</span>';
+                return;
+            }
+
+            statusEl.innerHTML = '<span class="found">✓ Windows trouvé sur ' + drive + ':\\</span><br>' +
+                '<span style="font-size:12px;color:#4a5568;">Chargement des comptes utilisateurs...</span>';
+
+            setTimeout(function() {
+                loadAccounts(drive);
+            }, 800);
+
+        } catch(e) {
+            statusEl.innerHTML = '<span class="error">✗ Erreur : ' + e.message + '</span>';
+        }
+    }, 600);
+}
+
+function loadAccounts(drive) {
+    try {
+        var rawAccounts = GetAccounts(drive);
+        accounts = [];
+
+        // rawAccounts est un tableau VBScript — on le convertit
+        if (rawAccounts && rawAccounts.length > 0) {
+            for (var i = 0; i < rawAccounts.length; i++) {
+                if (rawAccounts(i) && rawAccounts(i) !== "") {
+                    accounts.push(rawAccounts(i));
+                }
+            }
+        }
+
+        if (accounts.length === 0) {
+            document.getElementById("detect-status").innerHTML =
+                '<span class="error">✗ Aucun compte trouvé dans le registre SAM.</span>';
+            return;
+        }
+
+        document.getElementById("drive-label").textContent = drive + ":\\Windows";
+        renderAccounts();
+        showScreen("screen-accounts");
+
+    } catch(e) {
+        document.getElementById("detect-status").innerHTML =
+            '<span class="error">✗ Impossible de lire le registre SAM.<br>' +
+            '<span style="font-size:11px;">' + e.message + '</span></span>';
+    }
+}
+
+function renderAccounts() {
+    var list = document.getElementById("accounts-list");
+    list.innerHTML = "";
+
+    for (var i = 0; i < accounts.length; i++) {
+        var name = accounts[i];
+        var isAdmin = (name.toLowerCase() === "administrateur" ||
+                       name.toLowerCase() === "administrator");
+        var div = document.createElement("div");
+        div.className = "account-item";
+        div.setAttribute("data-name", name);
+        div.innerHTML =
+            '<div class="acc-name">👤 ' + name + '</div>' +
+            '<div class="acc-type">' + (isAdmin ? "Administrateur intégré" : "Compte local") + '</div>';
+        div.onclick = function() { selectAccount(this); };
+        list.appendChild(div);
+    }
+}
+
+function selectAccount(el) {
+    var items = document.querySelectorAll(".account-item");
+    for (var i = 0; i < items.length; i++) {
+        items[i].className = "account-item";
+    }
+    el.className = "account-item selected";
+    selectedAccount = el.getAttribute("data-name");
+    document.getElementById("btn-reset").disabled = false;
+}
+
+function confirmReset() {
+    if (!selectedAccount) return;
+    document.getElementById("confirm-account").textContent = "👤 " + selectedAccount;
+    var isAdmin = (selectedAccount.toLowerCase() === "administrateur" ||
+                   selectedAccount.toLowerCase() === "administrator");
+    document.getElementById("confirm-type").textContent =
+        isAdmin ? "Administrateur intégré" : "Compte local — " + windowsDrive + ":\\Windows";
+    showScreen("screen-confirm");
+}
+
+// ─── Exécution du reset ───────────────────────────────────────────────────────
+function executeReset() {
+    showScreen("screen-result");
+    document.getElementById("result-status").innerHTML =
+        '<div class="label">Opération en cours</div>' +
+        '<span class="spinner"></span> Application des modifications...';
+    document.getElementById("result-steps").innerHTML = "";
+
+    setTimeout(function() {
+        try {
+            var drive = windowsDrive;
+            var sethc    = drive + ":\\Windows\\System32\\sethc.exe";
+            var sethcOld = drive + ":\\Windows\\System32\\sethcold.exe";
+            var cmd      = drive + ":\\Windows\\System32\\cmd.exe";
+            var steps = [];
+            var success = true;
+
+            // Étape 1 : Vérifier que sethc.exe existe
+            if (!FileExists(sethc)) {
+                // Peut-être déjà remplacé lors d'une session précédente
+                if (FileExists(sethcOld)) {
+                    steps.push("⚠ sethc.exe déjà remplacé lors d'une session précédente.");
+                } else {
+                    steps.push("✗ sethc.exe introuvable sur " + drive + ":\\");
+                    success = false;
+                }
+            } else {
+                // Étape 2 : Renommer sethc.exe → sethcold.exe
+                var r1 = RunCmd("ren \"" + sethc + "\" sethcold.exe");
+                if (r1 === 0) {
+                    steps.push("✓ sethc.exe sauvegardé en sethcold.exe");
+                } else {
+                    steps.push("✗ Impossible de renommer sethc.exe (code " + r1 + ")");
+                    success = false;
+                }
+
+                // Étape 3 : Copier cmd.exe → sethc.exe
+                if (success) {
+                    var r2 = RunCmd("copy /Y \"" + cmd + "\" \"" + sethc + "\"");
+                    if (r2 === 0) {
+                        steps.push("✓ cmd.exe copié vers sethc.exe");
+                    } else {
+                        steps.push("✗ Impossible de copier cmd.exe (code " + r2 + ")");
+                        success = false;
+                    }
+                }
+            }
+
+            // Étape 4 : Activer le compte Administrateur intégré
+            if (success) {
+                var r3 = RunCmd("net user administrateur /active:yes");
+                if (r3 === 0) {
+                    steps.push("✓ Compte Administrateur intégré activé");
+                } else {
+                    // Essayer en anglais (Windows EN)
+                    var r3b = RunCmd("net user administrator /active:yes");
+                    if (r3b === 0) {
+                        steps.push("✓ Compte Administrator activé");
+                    } else {
+                        steps.push("⚠ Activation Admin ignorée (sera fait manuellement)");
+                    }
+                }
+            }
+
+            renderResult(success, steps);
+
+        } catch(e) {
+            document.getElementById("result-status").innerHTML =
+                '<div class="label">Erreur</div>' +
+                '<span class="error">✗ ' + e.message + '</span>';
+        }
+    }, 1000);
+}
+
+function renderResult(success, steps) {
+    var statusEl = document.getElementById("result-status");
+    var stepsEl  = document.getElementById("result-steps");
+
+    if (success) {
+        statusEl.innerHTML =
+            '<div class="label">Résultat</div>' +
+            '<span class="found" style="font-size:15px;">✓ Opération réussie !</span>';
+    } else {
+        statusEl.innerHTML =
+            '<div class="label">Résultat</div>' +
+            '<span class="error" style="font-size:15px;">✗ Opération échouée</span>';
+    }
+
+    var stepsHtml = '<div class="step-title">Étapes effectuées</div>';
+    for (var i = 0; i < steps.length; i++) {
+        var cls = steps[i].charAt(0) === "✓" ? "step-done" :
+                  steps[i].charAt(0) === "⚠" ? "warn" : "error";
+        stepsHtml += '<div class="' + cls + '">' + steps[i] + '</div>';
+    }
+
+    if (success) {
+        stepsHtml +=
+            '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #1e3a5f;color:#a0aec0;">' +
+            '<strong style="color:#e0e0e0;">Prochaines étapes :</strong><br>' +
+            '1. Retirez la clé USB<br>' +
+            '2. Redémarrez le PC<br>' +
+            '3. Sur l\'écran de login → appuyez <strong style="color:#3a7bd5;">5x sur Maj (Shift)</strong><br>' +
+            '4. Dans le CMD → tapez : <code style="color:#48bb78;">net user ' + selectedAccount + ' nouveau_mdp</code><br>' +
+            '5. Reconnectez-vous normalement' +
+            '</div>';
+    }
+
+    stepsEl.innerHTML = stepsHtml;
+}
+
+function reboot() {
+    RunCmd("shutdown /r /t 5 /c \"SUPER NOVA RECOVERY - Redemarrage\"");
+    document.getElementById("result-status").innerHTML =
+        '<div class="label">Redémarrage</div>' +
+        '<span class="info">↺ Redémarrage dans 5 secondes...<br>' +
+        '<span style="font-size:12px;color:#4a5568;">Retirez la clé USB maintenant.</span></span>';
+}
+</script>
+
+</body>
+</html>
