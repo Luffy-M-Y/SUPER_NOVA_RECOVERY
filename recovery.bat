@@ -18,7 +18,12 @@ goto :EOF
 :FOUND
 echo Windows trouve sur %WINDRIVE%:\
 
-REM 2. Sauvegarder sethc.exe
+REM 2. Prendre possession de sethc.exe
+takeown /f "%WINDRIVE%:\Windows\System32\sethc.exe" >nul 2>&1
+icacls "%WINDRIVE%:\Windows\System32\sethc.exe" /grant Administrateurs:F >nul 2>&1
+icacls "%WINDRIVE%:\Windows\System32\sethc.exe" /grant Administrators:F >nul 2>&1
+
+REM 3. Sauvegarder sethc.exe
 if exist "%WINDRIVE%:\Windows\System32\sethcold.exe" (
     echo sethc.exe deja remplace, on continue.
     goto :REPLACE_DONE
