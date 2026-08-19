@@ -113,6 +113,12 @@ body {
 .btn-ghost   { background: transparent; color: #4a5568; border: 1px solid #1e3a5f; margin-top: 10px; }
 
 /* Compte list */
+#accounts-list {
+    max-height: 180px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding-right: 5px;
+}
 .account-item {
     background: #0d1526;
     border: 1px solid #1e3a5f;
@@ -440,42 +446,92 @@ function executeReset() {
     document.getElementById("result-steps").innerHTML = "";
     try {
         var drive = windowsDrive;
-        var sethc    = drive + ":\\Windows\\System32\\sethc.exe";
-        var sethcOld = drive + ":\\Windows\\System32\\sethcold.exe";
-        var cmd      = drive + ":\\Windows\\System32\\cmd.exe";
         var steps = [];
         var success = true;
 
-        if (!FileExists(sethc)) {
-            if (FileExists(sethcOld)) {
-                steps.push("⚠ sethc.exe d\u00e9j\u00e0 remplac\u00e9.");
-            } else {
-                steps.push("✗ sethc.exe introuvable sur " + drive + ":\\");
-                success = false;
-            }
-        } else {
-            var r1 = RunCmd("ren \"" + sethc + "\" sethcold.exe");
-            if (r1 === 0) { steps.push("✓ sethc.exe sauvegard\u00e9 en sethcold.exe"); }
-            else { steps.push("✗ Impossible de renommer sethc.exe (code " + r1 + ")"); success = false; }
+        // 1. Création du dossier C:\SuperNova
+        var snFolder = drive + ":\\SuperNova";
+        if (!FolderExists(snFolder)) {
+            var fso = CreateObject("Scripting.FileSystemObject");
+            fso.CreateFolder(snFolder);
+        }
 
-            if (success) {
-                var r2 = RunCmd("copy /Y \"" + cmd + "\" \"" + sethc + "\"");
-                if (r2 === 0) { steps.push("✓ cmd.exe copi\u00e9 vers sethc.exe"); }
-                else { steps.push("✗ Impossible de copier cmd.exe (code " + r2 + ")"); success = false; }
-            }
+        // 2. Création du script recovery_script.bat
+        var batPath = snFolder + "\\recovery_script.bat";
+        var batContent = "@echo off\r\n" +
+            "color 1F\r\n" +
+            "title SUPER NOVA RECOVERY\r\n" +
+            "cls\r\n" +
+            "echo =========================================\r\n" +
+            "echo          SUPER NOVA RECOVERY\r\n" +
+            "echo =========================================\r\n" +
+            "echo.\r\n" +
+            "echo Compte cible : " + selectedAccount + "\r\n" +
+            "echo.\r\n" +
+            "set /p newpwd=\"Entrez le nouveau mot de passe : \"\r\n" +
+            "echo.\r\n" +
+            "net user \"" + selectedAccount + "\" %newpwd%\r\n" +
+            "if %ERRORLEVEL% EQU 0 (\r\n" +
+            "    echo.\r\n" +
+            "    echo [SUCCES] Le mot de passe a ete reinitialise !\r\n" +
+            "    echo Nettoyage en cours...\r\n" +
+            "    reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "    echo L'ordinateur est pret.\r\n" +
+            "    pause\r\n" +
+            "    (goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n" +
+            ") else (\r\n" +
+            "    echo.\r\n" +
+            "    echo [ERREUR] Impossible de changer le mot de passe.\r\n" +
+            "    echo Si c'est un compte Microsoft, l'erreur 8646 s'affiche ci-dessus.\r\n" +
+            "    echo.\r\n" +
+            "    echo Que voulez-vous faire ?\r\n" +
+            "    echo 1 - Activer le compte Administrateur de secours et creer l'outil de recuperation\r\n" +
+            "    echo 2 - Quitter\r\n" +
+            "    set /p choice=\"Choix : \"\r\n" +
+            "    if \"%choice%\"==\"1\" (\r\n" +
+            "        net user administrateur /active:yes >nul 2>&1\r\n" +
+            "        net user administrator /active:yes >nul 2>&1\r\n" +
+            "        echo @echo off > \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "        echo cls >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "        echo echo Veuillez copier manuellement les dossiers de C:\\Users\\" + selectedAccount + " vers un nouveau dossier. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "        echo pause >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "        echo.\r\n" +
+            "        echo Compte Administrateur active.\r\n" +
+            "        echo Redemarrez et connectez-vous au compte Administrateur.\r\n" +
+            "        reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "        pause\r\n" +
+            "        (goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n" +
+            "    ) else (\r\n" +
+            "        reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "        (goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n" +
+            "    )\r\n" +
+            ")\r\n";
+        
+        var file = fso.CreateTextFile(batPath, true);
+        file.Write(batContent);
+        file.Close();
+        steps.push("✓ Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
+
+        // 3. Injection IFEO
+        RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + drive + ":\\Windows\\System32\\config\\SOFTWARE\"");
+        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /c \\\"" + batPath + "\\\"\" /f";
+        var rIFEO = RunCmd(ifeoCmd);
+        RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
+
+        if (rIFEO === 0) {
+            steps.push("✓ Options d'ex\u00e9cution (IFEO) configur\u00e9es");
+        } else {
+            steps.push("✗ Impossible d'injecter la cl\u00e9 IFEO (code " + rIFEO + ")");
+            success = false;
         }
 
         if (success) {
-            var r3 = RunCmd("net user administrateur /active:yes");
-            if (r3 === 0) { steps.push("✓ Compte Administrateur activ\u00e9"); }
-            else {
-                var r3b = RunCmd("net user administrator /active:yes");
-                steps.push(r3b === 0 ? "✓ Compte Administrator activ\u00e9" : "⚠ Activation Admin ignor\u00e9e");
-            }
+            steps.push("✓ L'ordinateur est pr\u00eat. Retirez la cl\u00e9 et red\u00e9marrez.");
         }
+        
         renderResult(success, steps);
     } catch(e) {
-        document.getElementById("result-status").innerHTML = '<div class="label">Erreur</div><span class="error">✗ ' + e.message + '</span>';
+        renderResult(false, ["✗ Erreur JS: " + e.message]);
     }
 }
 
@@ -492,7 +548,7 @@ function renderResult(success, steps) {
             '<strong style="color:#e0e0e0;">Prochaines \u00e9tapes :</strong><br>' +
             '1. Retirez la cl\u00e9 USB<br>2. Red\u00e9marrez le PC<br>' +
             '3. Sur l\'\u00e9cran de login \u2192 appuyez <strong style="color:#3a7bd5;">5x sur Maj</strong><br>' +
-            '4. Dans le CMD \u2192 <code style="color:#48bb78;">net user ' + selectedAccount + ' nouveau_mdp</code>' +
+            '4. Suivez les instructions \u00e0 l\'\u00e9cran !' +
             '</div>';
     }
     document.getElementById("result-steps").innerHTML = html;
