@@ -10,7 +10,7 @@ REM ═════════════════════════�
 set WORKSPACE=C:\WinPE_SuperNova
 set MOUNT=%WORKSPACE%\mount
 set MEDIA=%WORKSPACE%\media
-set PROJECT=%~dp0..
+set PROJECT=%~dp0..\
 set OUTPUT=%PROJECT%output
 
 echo.
@@ -22,13 +22,14 @@ echo.
 REM ── Étape 1 : Nettoyer le workspace précédent ──────────────────────────────
 if exist "%WORKSPACE%" (
     echo [1/7] Nettoyage du workspace precedent...
+    Dism /Unmount-Image /MountDir:"%MOUNT%" /Discard >nul 2>&1
     rmdir /s /q "%WORKSPACE%"
 )
 
 REM ── Étape 2 : Créer le workspace WinPE ────────────────────────────────────
 echo [2/7] Creation du workspace WinPE...
-copype amd64 "%WORKSPACE%"
-if errorlevel 1 (
+call copype amd64 "%WORKSPACE%"
+if not exist "%MEDIA%\sources\boot.wim" (
     echo ERREUR : copype a echoue. Verifiez que l'ADK est installe.
     goto :EOF
 )
@@ -43,6 +44,10 @@ if errorlevel 1 (
 
 REM ── Étape 4 : Copier les fichiers SUPER NOVA ──────────────────────────────
 echo [4/7] Injection des fichiers SUPER NOVA...
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-HTA.cab"
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-HTA_fr-fr.cab"
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-Scripting.cab"
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-Scripting_fr-fr.cab"
 mkdir "%MOUNT%\SuperNova"
 copy /Y "%PROJECT%recovery.hta" "%MOUNT%\SuperNova\"
 copy /Y "%PROJECT%recovery.bat" "%MOUNT%\SuperNova\"
@@ -67,22 +72,30 @@ if errorlevel 1 (
     goto :EOF
 )
 
-REM ── Étape 8 : Créer le ZIP final ──────────────────────────────────────────
+REM ── Étape 8 : Créer le ZIP + ISO ────────────────────────────────────────────
 echo.
-echo Creation du ZIP final...
+echo Creation des livrables...
 if not exist "%OUTPUT%" mkdir "%OUTPUT%"
-if exist "%OUTPUT%\SUPER_NOVA_RECOVERY.zip" del "%OUTPUT%\SUPER_NOVA_RECOVERY.zip"
 
+if exist "%OUTPUT%\SUPER_NOVA_RECOVERY.zip" del "%OUTPUT%\SUPER_NOVA_RECOVERY.zip"
 powershell -Command "Compress-Archive -Path 'C:\WinPE_SuperNova\media\*' -DestinationPath '%OUTPUT%\SUPER_NOVA_RECOVERY.zip'"
 if errorlevel 1 (
     echo ERREUR : Impossible de creer le ZIP.
     goto :EOF
 )
 
+if exist "%OUTPUT%\SUPER_NOVA_RECOVERY.iso" del "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
+MakeWinPEMedia /ISO "%WORKSPACE%" "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
+if errorlevel 1 (
+    echo ERREUR : Impossible de creer l'ISO.
+    goto :EOF
+)
+
 echo.
 echo ══════════════════════════════════════
 echo  Build termine avec succes !
-echo  Livrable : %OUTPUT%\SUPER_NOVA_RECOVERY.zip
+echo  ZIP : %OUTPUT%\SUPER_NOVA_RECOVERY.zip
+echo  ISO : %OUTPUT%\SUPER_NOVA_RECOVERY.iso
 echo ══════════════════════════════════════
 echo.
 

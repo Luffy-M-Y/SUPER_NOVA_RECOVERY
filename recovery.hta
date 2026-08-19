@@ -195,7 +195,7 @@ body {
                 <span class="spinner"></span> Recherche de la partition Windows...
             </div>
         </div>
-        <button class="btn btn-primary" id="btn-detect" onclick="detectWindows()" disabled>
+        <button class="btn btn-primary" id="btn-detect" onclick="detectWindows()">
             Analyser les disques
         </button>
     </div>
@@ -297,7 +297,8 @@ Function GetAccounts(winDrive)
     
     For i = 0 To UBound(lines)
         Dim line : line = Trim(lines(i))
-        If Left(line, 4) = "HKLM" Then
+        ' reg query affiche HKEY_LOCAL_MACHINE et non HKLM
+        If Left(line, 4) = "HKEY" Then
             ' Extraire le nom du compte (dernière partie du chemin)
             Dim parts : parts = Split(line, "\")
             acc = parts(UBound(parts))
@@ -312,7 +313,11 @@ Function GetAccounts(winDrive)
     ' Décharger le SAM
     RunCmd "reg unload HKLM\OFFLINE_SAM"
     
-    GetAccounts = accounts
+    If count = 0 Then
+        GetAccounts = ""
+    Else
+        GetAccounts = Join(accounts, "|")
+    End If
 End Function
 
 ' ─── Vérifier si BitLocker est actif ──────────────────────────────────────────
@@ -324,15 +329,21 @@ End Function
 </script>
 
 <script language="JavaScript">
+// ─── Gestionnaire d'erreurs global ────────────────────────────────────────────
+window.onerror = function(msg, url, line) {
+    alert("ERREUR CRITIQUE : " + msg + "\nLigne : " + line);
+    return true; // Évite l'affichage de la fenêtre d'erreur standard d'IE
+};
+
 var selectedAccount = "";
 var windowsDrive = "";
 var accounts = [];
 
 // ─── Navigation entre écrans ──────────────────────────────────────────────────
+var screenIds = ["screen-detect", "screen-accounts", "screen-confirm", "screen-result"];
 function showScreen(id) {
-    var screens = document.querySelectorAll(".screen");
-    for (var i = 0; i < screens.length; i++) {
-        screens[i].className = "screen";
+    for (var i = 0; i < screenIds.length; i++) {
+        document.getElementById(screenIds[i]).className = "screen";
     }
     document.getElementById(id).className = "screen active";
 }
@@ -345,93 +356,70 @@ window.onload = function() {
 function detectWindows() {
     var statusEl = document.getElementById("detect-status");
     statusEl.innerHTML = '<span class="spinner"></span> Recherche en cours...';
-
-    setTimeout(function() {
-        try {
-            // Vérifier BitLocker d'abord
-            var drive = FindWindowsDrive();
-
-            if (drive === "") {
-                statusEl.innerHTML = '<span class="error">✗ Partition Windows introuvable.</span><br>' +
-                    '<span style="font-size:12px;color:#4a5568;">Vérifiez que le disque dur est bien connecté.</span>';
-                return;
-            }
-
-            windowsDrive = drive;
-
-            if (IsBitLockerActive(drive)) {
-                statusEl.innerHTML = '<span class="warn">⚠ BitLocker détecté sur ' + drive + ':\\</span><br>' +
-                    '<span style="font-size:12px;color:#4a5568;">Fournissez la clé de récupération BitLocker pour continuer.</span>';
-                return;
-            }
-
-            statusEl.innerHTML = '<span class="found">✓ Windows trouvé sur ' + drive + ':\\</span><br>' +
-                '<span style="font-size:12px;color:#4a5568;">Chargement des comptes utilisateurs...</span>';
-
-            setTimeout(function() {
-                loadAccounts(drive);
-            }, 800);
-
-        } catch(e) {
-            statusEl.innerHTML = '<span class="error">✗ Erreur : ' + e.message + '</span>';
+    try {
+        var drive = FindWindowsDrive();
+        if (drive === "") {
+            statusEl.innerHTML = '<span class="error">✗ Partition Windows introuvable.</span>';
+            return;
         }
-    }, 600);
+        windowsDrive = drive;
+        if (IsBitLockerActive(drive)) {
+            statusEl.innerHTML = '<span class="warn">⚠ BitLocker d\u00e9tect\u00e9 sur ' + drive + ':\\</span>';
+            return;
+        }
+        statusEl.innerHTML = '<span class="found">✓ Windows trouv\u00e9 sur ' + drive + ':\\</span>';
+        loadAccounts(drive);
+    } catch(e) {
+        statusEl.innerHTML = '<span class="error">✗ Erreur : ' + e.message + '</span>';
+    }
 }
 
 function loadAccounts(drive) {
     try {
-        var rawAccounts = GetAccounts(drive);
+        var rawString = GetAccounts(drive);
         accounts = [];
 
-        // rawAccounts est un tableau VBScript — on le convertit
-        if (rawAccounts && rawAccounts.length > 0) {
-            for (var i = 0; i < rawAccounts.length; i++) {
-                if (rawAccounts(i) && rawAccounts(i) !== "") {
-                    accounts.push(rawAccounts(i));
+        if (rawString !== "") {
+            var splitted = rawString.split("|");
+            for (var i = 0; i < splitted.length; i++) {
+                if (splitted[i] !== "") {
+                    accounts.push(splitted[i]);
                 }
             }
         }
 
         if (accounts.length === 0) {
-            document.getElementById("detect-status").innerHTML =
-                '<span class="error">✗ Aucun compte trouvé dans le registre SAM.</span>';
+            document.getElementById("detect-status").innerHTML = '<span class="error">✗ Aucun compte trouv\u00e9.</span>';
             return;
         }
-
         document.getElementById("drive-label").textContent = drive + ":\\Windows";
         renderAccounts();
         showScreen("screen-accounts");
-
     } catch(e) {
-        document.getElementById("detect-status").innerHTML =
-            '<span class="error">✗ Impossible de lire le registre SAM.<br>' +
-            '<span style="font-size:11px;">' + e.message + '</span></span>';
+        document.getElementById("detect-status").innerHTML = '<span class="error">✗ SAM illisible : ' + e.message + '</span>';
     }
 }
 
 function renderAccounts() {
     var list = document.getElementById("accounts-list");
     list.innerHTML = "";
-
     for (var i = 0; i < accounts.length; i++) {
         var name = accounts[i];
-        var isAdmin = (name.toLowerCase() === "administrateur" ||
-                       name.toLowerCase() === "administrator");
+        var isAdmin = (name.toLowerCase() === "administrateur" || name.toLowerCase() === "administrator");
         var div = document.createElement("div");
         div.className = "account-item";
         div.setAttribute("data-name", name);
-        div.innerHTML =
-            '<div class="acc-name">👤 ' + name + '</div>' +
-            '<div class="acc-type">' + (isAdmin ? "Administrateur intégré" : "Compte local") + '</div>';
+        div.innerHTML = '<div class="acc-name">👤 ' + name + '</div><div class="acc-type">' + (isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte local") + '</div>';
         div.onclick = function() { selectAccount(this); };
         list.appendChild(div);
     }
 }
 
 function selectAccount(el) {
-    var items = document.querySelectorAll(".account-item");
-    for (var i = 0; i < items.length; i++) {
-        items[i].className = "account-item";
+    var container = document.getElementById("accounts-list");
+    var divs = container.getElementsByTagName("div");
+    for (var i = 0; i < divs.length; i++) {
+        if (divs[i].parentNode === container) { divs[i].className = "account-item"; }
     }
     el.className = "account-item selected";
     selectedAccount = el.getAttribute("data-name");
@@ -441,129 +429,78 @@ function selectAccount(el) {
 function confirmReset() {
     if (!selectedAccount) return;
     document.getElementById("confirm-account").textContent = "👤 " + selectedAccount;
-    var isAdmin = (selectedAccount.toLowerCase() === "administrateur" ||
-                   selectedAccount.toLowerCase() === "administrator");
-    document.getElementById("confirm-type").textContent =
-        isAdmin ? "Administrateur intégré" : "Compte local — " + windowsDrive + ":\\Windows";
+    var isAdmin = (selectedAccount.toLowerCase() === "administrateur" || selectedAccount.toLowerCase() === "administrator");
+    document.getElementById("confirm-type").textContent = isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte local \u2014 " + windowsDrive + ":\\Windows";
     showScreen("screen-confirm");
 }
 
-// ─── Exécution du reset ───────────────────────────────────────────────────────
 function executeReset() {
     showScreen("screen-result");
-    document.getElementById("result-status").innerHTML =
-        '<div class="label">Opération en cours</div>' +
-        '<span class="spinner"></span> Application des modifications...';
+    document.getElementById("result-status").innerHTML = '<div class="label">Op\u00e9ration en cours</div><span class="spinner"></span> Application des modifications...';
     document.getElementById("result-steps").innerHTML = "";
+    try {
+        var drive = windowsDrive;
+        var sethc    = drive + ":\\Windows\\System32\\sethc.exe";
+        var sethcOld = drive + ":\\Windows\\System32\\sethcold.exe";
+        var cmd      = drive + ":\\Windows\\System32\\cmd.exe";
+        var steps = [];
+        var success = true;
 
-    setTimeout(function() {
-        try {
-            var drive = windowsDrive;
-            var sethc    = drive + ":\\Windows\\System32\\sethc.exe";
-            var sethcOld = drive + ":\\Windows\\System32\\sethcold.exe";
-            var cmd      = drive + ":\\Windows\\System32\\cmd.exe";
-            var steps = [];
-            var success = true;
-
-            // Étape 1 : Vérifier que sethc.exe existe
-            if (!FileExists(sethc)) {
-                // Peut-être déjà remplacé lors d'une session précédente
-                if (FileExists(sethcOld)) {
-                    steps.push("⚠ sethc.exe déjà remplacé lors d'une session précédente.");
-                } else {
-                    steps.push("✗ sethc.exe introuvable sur " + drive + ":\\");
-                    success = false;
-                }
+        if (!FileExists(sethc)) {
+            if (FileExists(sethcOld)) {
+                steps.push("⚠ sethc.exe d\u00e9j\u00e0 remplac\u00e9.");
             } else {
-                // Étape 2 : Renommer sethc.exe → sethcold.exe
-                var r1 = RunCmd("ren \"" + sethc + "\" sethcold.exe");
-                if (r1 === 0) {
-                    steps.push("✓ sethc.exe sauvegardé en sethcold.exe");
-                } else {
-                    steps.push("✗ Impossible de renommer sethc.exe (code " + r1 + ")");
-                    success = false;
-                }
-
-                // Étape 3 : Copier cmd.exe → sethc.exe
-                if (success) {
-                    var r2 = RunCmd("copy /Y \"" + cmd + "\" \"" + sethc + "\"");
-                    if (r2 === 0) {
-                        steps.push("✓ cmd.exe copié vers sethc.exe");
-                    } else {
-                        steps.push("✗ Impossible de copier cmd.exe (code " + r2 + ")");
-                        success = false;
-                    }
-                }
+                steps.push("✗ sethc.exe introuvable sur " + drive + ":\\");
+                success = false;
             }
+        } else {
+            var r1 = RunCmd("ren \"" + sethc + "\" sethcold.exe");
+            if (r1 === 0) { steps.push("✓ sethc.exe sauvegard\u00e9 en sethcold.exe"); }
+            else { steps.push("✗ Impossible de renommer sethc.exe (code " + r1 + ")"); success = false; }
 
-            // Étape 4 : Activer le compte Administrateur intégré
             if (success) {
-                var r3 = RunCmd("net user administrateur /active:yes");
-                if (r3 === 0) {
-                    steps.push("✓ Compte Administrateur intégré activé");
-                } else {
-                    // Essayer en anglais (Windows EN)
-                    var r3b = RunCmd("net user administrator /active:yes");
-                    if (r3b === 0) {
-                        steps.push("✓ Compte Administrator activé");
-                    } else {
-                        steps.push("⚠ Activation Admin ignorée (sera fait manuellement)");
-                    }
-                }
+                var r2 = RunCmd("copy /Y \"" + cmd + "\" \"" + sethc + "\"");
+                if (r2 === 0) { steps.push("✓ cmd.exe copi\u00e9 vers sethc.exe"); }
+                else { steps.push("✗ Impossible de copier cmd.exe (code " + r2 + ")"); success = false; }
             }
-
-            renderResult(success, steps);
-
-        } catch(e) {
-            document.getElementById("result-status").innerHTML =
-                '<div class="label">Erreur</div>' +
-                '<span class="error">✗ ' + e.message + '</span>';
         }
-    }, 1000);
+
+        if (success) {
+            var r3 = RunCmd("net user administrateur /active:yes");
+            if (r3 === 0) { steps.push("✓ Compte Administrateur activ\u00e9"); }
+            else {
+                var r3b = RunCmd("net user administrator /active:yes");
+                steps.push(r3b === 0 ? "✓ Compte Administrator activ\u00e9" : "⚠ Activation Admin ignor\u00e9e");
+            }
+        }
+        renderResult(success, steps);
+    } catch(e) {
+        document.getElementById("result-status").innerHTML = '<div class="label">Erreur</div><span class="error">✗ ' + e.message + '</span>';
+    }
 }
 
 function renderResult(success, steps) {
-    var statusEl = document.getElementById("result-status");
-    var stepsEl  = document.getElementById("result-steps");
-
-    if (success) {
-        statusEl.innerHTML =
-            '<div class="label">Résultat</div>' +
-            '<span class="found" style="font-size:15px;">✓ Opération réussie !</span>';
-    } else {
-        statusEl.innerHTML =
-            '<div class="label">Résultat</div>' +
-            '<span class="error" style="font-size:15px;">✗ Opération échouée</span>';
-    }
-
-    var stepsHtml = '<div class="step-title">Étapes effectuées</div>';
+    document.getElementById("result-status").innerHTML = '<div class="label">R\u00e9sultat</div>' +
+        (success ? '<span class="found" style="font-size:15px;">✓ Op\u00e9ration r\u00e9ussie !</span>' : '<span class="error" style="font-size:15px;">✗ Op\u00e9ration \u00e9chou\u00e9e</span>');
+    var html = '<div class="step-title">\u00c9tapes effectu\u00e9es</div>';
     for (var i = 0; i < steps.length; i++) {
-        var cls = steps[i].charAt(0) === "✓" ? "step-done" :
-                  steps[i].charAt(0) === "⚠" ? "warn" : "error";
-        stepsHtml += '<div class="' + cls + '">' + steps[i] + '</div>';
+        var cls = steps[i].charAt(0) === "✓" ? "step-done" : steps[i].charAt(0) === "⚠" ? "warn" : "error";
+        html += '<div class="' + cls + '">' + steps[i] + '</div>';
     }
-
     if (success) {
-        stepsHtml +=
-            '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #1e3a5f;color:#a0aec0;">' +
-            '<strong style="color:#e0e0e0;">Prochaines étapes :</strong><br>' +
-            '1. Retirez la clé USB<br>' +
-            '2. Redémarrez le PC<br>' +
-            '3. Sur l\'écran de login → appuyez <strong style="color:#3a7bd5;">5x sur Maj (Shift)</strong><br>' +
-            '4. Dans le CMD → tapez : <code style="color:#48bb78;">net user ' + selectedAccount + ' nouveau_mdp</code><br>' +
-            '5. Reconnectez-vous normalement' +
+        html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #1e3a5f;color:#a0aec0;">' +
+            '<strong style="color:#e0e0e0;">Prochaines \u00e9tapes :</strong><br>' +
+            '1. Retirez la cl\u00e9 USB<br>2. Red\u00e9marrez le PC<br>' +
+            '3. Sur l\'\u00e9cran de login \u2192 appuyez <strong style="color:#3a7bd5;">5x sur Maj</strong><br>' +
+            '4. Dans le CMD \u2192 <code style="color:#48bb78;">net user ' + selectedAccount + ' nouveau_mdp</code>' +
             '</div>';
     }
-
-    stepsEl.innerHTML = stepsHtml;
+    document.getElementById("result-steps").innerHTML = html;
 }
 
 function reboot() {
     RunCmd("shutdown /r /t 5 /c \"SUPER NOVA RECOVERY - Redemarrage\"");
-    document.getElementById("result-status").innerHTML =
-        '<div class="label">Redémarrage</div>' +
-        '<span class="info">↺ Redémarrage dans 5 secondes...<br>' +
-        '<span style="font-size:12px;color:#4a5568;">Retirez la clé USB maintenant.</span></span>';
+    document.getElementById("result-status").innerHTML = '<div class="label">Red\u00e9marrage</div><span class="info">\u21ba Red\u00e9marrage dans 5 secondes...</span>';
 }
 </script>
 
