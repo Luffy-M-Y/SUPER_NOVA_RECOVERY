@@ -471,41 +471,101 @@ function executeReset() {
             "set /p newpwd=\"Entrez le nouveau mot de passe : \"\r\n" +
             "echo.\r\n" +
             "net user \"" + selectedAccount + "\" %newpwd%\r\n" +
-            "if %ERRORLEVEL% EQU 0 (\r\n" +
-            "    echo.\r\n" +
-            "    echo [SUCCES] Le mot de passe a ete reinitialise !\r\n" +
-            "    echo Nettoyage en cours...\r\n" +
-            "    reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "    echo L'ordinateur est pret.\r\n" +
-            "    pause\r\n" +
-            "    (goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n" +
-            ") else (\r\n" +
-            "    echo.\r\n" +
-            "    echo [ERREUR] Impossible de changer le mot de passe.\r\n" +
-            "    echo Si c'est un compte Microsoft, l'erreur 8646 s'affiche ci-dessus.\r\n" +
-            "    echo.\r\n" +
-            "    echo Que voulez-vous faire ?\r\n" +
-            "    echo 1 - Activer le compte Administrateur de secours et creer l'outil de recuperation\r\n" +
-            "    echo 2 - Quitter\r\n" +
-            "    set /p choice=\"Choix : \"\r\n" +
-            "    if \"%choice%\"==\"1\" (\r\n" +
-            "        net user administrateur /active:yes >nul 2>&1\r\n" +
-            "        net user administrator /active:yes >nul 2>&1\r\n" +
-            "        echo @echo off > \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "        echo cls >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "        echo echo Veuillez copier manuellement les dossiers de C:\\Users\\" + selectedAccount + " vers un nouveau dossier. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "        echo pause >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "        echo.\r\n" +
-            "        echo Compte Administrateur active.\r\n" +
-            "        echo Redemarrez et connectez-vous au compte Administrateur.\r\n" +
-            "        reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "        pause\r\n" +
-            "        (goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n" +
-            "    ) else (\r\n" +
-            "        reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "        (goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n" +
-            "    )\r\n" +
-            ")\r\n";
+            "if %ERRORLEVEL% EQU 0 goto :SUCCESS\r\n" +
+            "goto :MS_ACCOUNT\r\n" +
+            "\r\n" +
+            ":SUCCESS\r\n" +
+            "echo.\r\n" +
+            "echo [SUCCES] Le mot de passe a ete reinitialise !\r\n" +
+            "echo Nettoyage en cours...\r\n" +
+            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "echo L'ordinateur va redemarrer dans 5 secondes pour appliquer les changements.\r\n" +
+            "shutdown /r /t 5\r\n" +
+            "pause\r\n" +
+            "goto :CLEANUP\r\n" +
+            "\r\n" +
+            ":MS_ACCOUNT\r\n" +
+            "echo.\r\n" +
+            "echo =========================================\r\n" +
+            "echo  COMPTE MICROSOFT DETECTE\r\n" +
+            "echo =========================================\r\n" +
+            "echo.\r\n" +
+            "echo Ce compte est lie a Microsoft.\r\n" +
+            "echo Pour changer le mot de passe, rendez-vous sur :\r\n" +
+            "echo    https://account.live.com/password/reset\r\n" +
+            "echo.\r\n" +
+            "echo Cependant, vous pouvez recuperer vos donnees !\r\n" +
+            "echo.\r\n" +
+            "echo 1 - Recuperer mes donnees (creer un compte de secours)\r\n" +
+            "echo 2 - Quitter\r\n" +
+            "echo.\r\n" +
+            "set /p choice=\"Choix : \"\r\n" +
+            "if \"%choice%\"==\"1\" goto :RECOVER\r\n" +
+            "goto :QUIT\r\n" +
+            "\r\n" +
+            ":RECOVER\r\n" +
+            "echo.\r\n" +
+            "echo Creation du compte SuperNovaAdmin...\r\n" +
+            "net user SuperNovaAdmin \"\" /add >nul 2>&1\r\n" +
+            "net localgroup Administrateurs SuperNovaAdmin /add >nul 2>&1\r\n" +
+            "net localgroup Administrators SuperNovaAdmin /add >nul 2>&1\r\n" +
+            "echo [OK] Compte SuperNovaAdmin cree avec succes.\r\n" +
+            "echo.\r\n" +
+            "echo Generation de l'outil de recuperation...\r\n" +
+            "echo @echo off > \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo color 1F >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo title SUPER NOVA - Recuperation de donnees >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo cls >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo fsutil dirty query %%systemdrive%% ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo if %%errorLevel%% NEQ 0 ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo     echo Demande des privileges administrateur... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo     powershell -Command \"Start-Process '%%~f0' -Verb RunAs\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo     exit /b >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo ) >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo    SUPER NOVA - Recuperation de donnees >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo Copie des dossiers de " + selectedAccount + " en cours... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo mkdir \"C:\\Backup_" + selectedAccount + "\" 2^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Desktop\" \"C:\\Backup_" + selectedAccount + "\\Bureau\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Documents\" \"C:\\Backup_" + selectedAccount + "\\Documents\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Pictures\" \"C:\\Backup_" + selectedAccount + "\\Images\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Downloads\" \"C:\\Backup_" + selectedAccount + "\\Telechargements\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Videos\" \"C:\\Backup_" + selectedAccount + "\\Videos\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo  RECUPERATION TERMINEE ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo Vos fichiers sont dans : C:\\Backup_" + selectedAccount + " >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo Vous pouvez les copier sur une cle USB. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo pause >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo.\r\n" +
+            "echo [OK] Outil de recuperation installe sur le Bureau.\r\n" +
+            "echo.\r\n" +
+            "echo =========================================\r\n" +
+            "echo  PROCHAINES ETAPES :\r\n" +
+            "echo =========================================\r\n" +
+            "echo 1. Le PC va redemarrer automatiquement.\r\n" +
+            "echo 2. Connectez-vous au compte \"SuperNovaAdmin\" (sans mot de passe).\r\n" +
+            "echo 3. Double-cliquez sur \"CopyData\" sur le Bureau.\r\n" +
+            "echo 4. Vos fichiers seront copies dans C:\\Backup_" + selectedAccount + "\r\n" +
+            "echo.\r\n" +
+            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "echo Redemarrage dans 10 secondes...\r\n" +
+            "shutdown /r /t 10\r\n" +
+            "pause\r\n" +
+            "goto :CLEANUP\r\n" +
+            "\r\n" +
+            ":QUIT\r\n" +
+            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "goto :CLEANUP\r\n" +
+            "\r\n" +
+            ":CLEANUP\r\n" +
+            "(goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n";
         var fso2 = new ActiveXObject("Scripting.FileSystemObject");
         var file = fso2.CreateTextFile(batPath, true);
         file.Write(batContent);
