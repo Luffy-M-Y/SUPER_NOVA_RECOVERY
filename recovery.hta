@@ -452,7 +452,7 @@ function executeReset() {
         // 1. Création du dossier C:\SuperNova
         var snFolder = drive + ":\\SuperNova";
         if (!FolderExists(snFolder)) {
-            var fso = CreateObject("Scripting.FileSystemObject");
+            var fso = new ActiveXObject("Scripting.FileSystemObject");
             fso.CreateFolder(snFolder);
         }
 
@@ -506,8 +506,8 @@ function executeReset() {
             "        (goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n" +
             "    )\r\n" +
             ")\r\n";
-        
-        var file = fso.CreateTextFile(batPath, true);
+        var fso2 = new ActiveXObject("Scripting.FileSystemObject");
+        var file = fso2.CreateTextFile(batPath, true);
         file.Write(batContent);
         file.Close();
         steps.push("✓ Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
