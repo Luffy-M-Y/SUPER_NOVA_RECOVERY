@@ -675,7 +675,7 @@ function executeReset() {
             "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
             "echo Redemarrage dans 15 secondes...\r\n" +
             "shutdown /r /t 15\r\n" +
-            "pause\r\n" +
+            "timeout /t 14 /nobreak >nul\r\n" +
             "goto :CLEANUP\r\n" +
             "\r\n" +
             ":QUIT\r\n" +
