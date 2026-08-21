@@ -643,9 +643,21 @@ function executeReset() {
             "echo timeout /t 14 /nobreak ^>nul >> \"%NF%\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%NF%\"\r\n" +
             "echo :SKIP_CLEAN >> \"%NF%\"\r\n" +
-            "echo echo Nettoyage annule. >> \"%NF%\"\r\n" +
+            "echo echo. >> \"%NF%\"\r\n" +
+            "echo echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin. >> \"%NF%\"\r\n" +
+            "echo echo Ce compte n'a actuellement pas de mot de passe. >> \"%NF%\"\r\n" +
+            "echo :PWD_LOOP2 >> \"%NF%\"\r\n" +
+            "echo set \"adminPass=\" >> \"%NF%\"\r\n" +
+            "echo set /p adminPass=\"Veuillez definir un mot de passe pour le securiser : \" >> \"%NF%\"\r\n" +
+            "echo if \"%%adminPass%%\"==\"\" goto :PWD_LOOP2 >> \"%NF%\"\r\n" +
+            "echo net user SuperNovaAdmin \"%%adminPass%%\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo echo [OK] Mot de passe enregistre. Vous pouvez renommer ce compte dans Parametres. >> \"%NF%\"\r\n" +
+            "echo echo. >> \"%NF%\"\r\n" +
+            "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo del \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo timeout /t 5 /nobreak ^>nul >> \"%NF%\"\r\n" +
+            "echo echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications. >> \"%NF%\"\r\n" +
+            "echo shutdown /r /t 15 >> \"%NF%\"\r\n" +
+            "echo timeout /t 14 /nobreak ^>nul >> \"%NF%\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%NF%\"\r\n" +
             "echo.\r\n" +
             "echo [OK] Script de nettoyage genere.\r\n" +
