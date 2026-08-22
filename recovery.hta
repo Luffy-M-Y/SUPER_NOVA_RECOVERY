@@ -566,13 +566,8 @@ function executeReset() {
             "echo net localgroup Administrators \"%%newUser%%\" /add ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo [OK] Le compte %%newUser%% a ete cree avec succes et est Administrateur ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Configuration du script de nettoyage pour le premier demarrage... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo set \"ST=C:\\Users\\%%newUser%%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\SnSetup.bat\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo rem Creation prealable de l'arborescence du nouveau profil utilisateur >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo mkdir \"C:\\Users\\%%newUser%%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo @echo off ^> \"%%ST%%\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo copy \"C:\\ProgramData\\SuperNova\\NettoyageFinal.bat\" \"%%%%USERPROFILE%%%%\\Desktop\\NettoyageFinal.bat\" ^^^>nul ^>^> \"%%ST%%\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ^^^(goto^^^) 2^^^>nul ^^^& del \"%%%%~f0\" ^>^> \"%%ST%%\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo [OK] Script de nettoyage configure pour le nouveau compte. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo copy \"C:\\ProgramData\\SuperNova\\NettoyageFinal.bat\" \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo ======================================================== >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo FELICITATIONS ! Votre nouveau compte a ete cree. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -583,7 +578,7 @@ function executeReset() {
             "echo echo 3. Cela supprimera le compte SuperNovaAdmin pour securiser le PC. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo ======================================================== >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo shutdown /r /t 15 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo pause >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo timeout /t 14 /nobreak ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo :KEEP_ADMIN >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -599,12 +594,16 @@ function executeReset() {
             "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo Le PC va redemarrer dans 15 secondes... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo shutdown /r /t 15 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo pause >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo timeout /t 14 /nobreak ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo :END_SCRIPT >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo.\r\n" +
+            "echo.\r\n" +
+            "echo =========================================\r\n" +
+            "echo  Generation de NettoyageFinal.bat...\r\n" +
+            "echo =========================================\r\n" +
             "set \"NF=C:\\ProgramData\\SuperNova\\NettoyageFinal.bat\"\r\n" +
             "mkdir \"C:\\ProgramData\\SuperNova\" 2>nul\r\n" +
             "echo @echo off > \"%NF%\"\r\n" +
@@ -631,6 +630,7 @@ function executeReset() {
             "echo net user SuperNovaAdmin /delete >> \"%NF%\"\r\n" +
             "echo rd /s /q \"C:\\Users\\SuperNovaAdmin\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo del \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
             "echo echo [OK] Compte SuperNovaAdmin supprime avec succes ! >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
@@ -639,13 +639,13 @@ function executeReset() {
             "echo echo. >> \"%NF%\"\r\n" +
             "echo echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications. >> \"%NF%\"\r\n" +
             "echo shutdown /r /t 15 >> \"%NF%\"\r\n" +
-            "echo pause >> \"%NF%\"\r\n" +
             "echo del \"%%public%%\\Desktop\\CopyData.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo timeout /t 14 /nobreak ^>nul >> \"%NF%\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%NF%\"\r\n" +
             "echo :SKIP_CLEAN >> \"%NF%\"\r\n" +
             "echo echo Nettoyage annule. >> \"%NF%\"\r\n" +
-            "echo pause >> \"%NF%\"\r\n" +
-            "echo del \"%%public%%\\Desktop\\CopyData.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo del \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo timeout /t 5 /nobreak ^>nul >> \"%NF%\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%NF%\"\r\n" +
             "echo.\r\n" +
             "echo [OK] Script de nettoyage genere.\r\n" +
