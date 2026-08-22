@@ -507,7 +507,8 @@ function executeReset() {
         // 2. Création du script recovery_script.bat
         var batPath = snFolder + "\\recovery_script.bat";
         var batContent = "@echo off\r\n" +
-            "color 1F\r\n" +
+            "color 0F\r\n" +
+            "mode con cols=84 lines=34\r\n" +
             "title SUPER NOVA RECOVERY\r\n" +
             "cls\r\n" +
             "echo =========================================\r\n" +
@@ -525,10 +526,10 @@ function executeReset() {
             ":SUCCESS\r\n" +
             "echo.\r\n" +
             "echo [SUCCES] Le mot de passe a ete reinitialise !\r\n" +
-            "echo Nettoyage en cours...\r\n" +
+            "echo Finalisation en cours...\r\n" +
             "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "echo L'ordinateur va redemarrer dans 5 secondes pour appliquer les changements.\r\n" +
-            "shutdown /r /t 5\r\n" +
+            "echo L'ordinateur va redemarrer dans 10 secondes pour appliquer les changements.\r\n" +
+            "shutdown /r /t 10\r\n" +
             "pause\r\n" +
             "goto :CLEANUP\r\n" +
             "\r\n" +
@@ -559,14 +560,15 @@ function executeReset() {
             "net localgroup Administrators SuperNovaAdmin /add >nul 2>&1\r\n" +
             "echo [OK] Compte SuperNovaAdmin cree avec succes.\r\n" +
             "echo.\r\n" +
-            "echo Generation de l'outil de recuperation...\r\n" +
+            "echo Preparation de l'outil de transfert...\r\n" +
             "echo @echo off > \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo color 1F >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo color 0F >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo mode con cols=84 lines=34 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo title SUPER NOVA - Recuperation de donnees >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo cls >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo fsutil dirty query %%systemdrive%% ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo if %%errorLevel%% NEQ 0 ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo Demande des privileges administrateur... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo     echo Demande d'autorisation... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     powershell -Command \"Start-Process '%%~f0' -Verb RunAs\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     exit /b >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo ) >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -574,7 +576,7 @@ function executeReset() {
             "echo echo    SUPER NOVA - Recuperation de donnees >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Copie des dossiers de " + selectedAccount + " en cours... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo Copie de vos fichiers en cours... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo mkdir \"C:\\Backup_" + selectedAccount + "\" 2^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Desktop\" \"C:\\Backup_" + selectedAccount + "\\Bureau\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -584,7 +586,7 @@ function executeReset() {
             "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Videos\" \"C:\\Backup_" + selectedAccount + "\\Videos\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo  RECUPERATION TERMINEE ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo  COPIE TERMINEE ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo if exist \"C:\\Backup_" + selectedAccount + "\\Bureau\" ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -592,8 +594,8 @@ function executeReset() {
             "echo     echo Vos fichiers sont prets pour le transfert final. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo ) else ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     echo [ERREUR] La sauvegarde a echoue ou aucun fichier n'a ete copie. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo Si vous n'avez pas accepte la demande d'administrateur, >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo veuillez faire Clic Droit -^> Executer en tant qu'administrateur. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo     echo Si vous n'avez pas accepte la demande d'autorisation, >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo     echo veuillez relancer le programme. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     pause >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     exit /b >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo ) >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -614,7 +616,7 @@ function executeReset() {
             "echo net localgroup Administrators \"%%newUser%%\" /add ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo [OK] Le compte %%newUser%% a ete cree avec succes et est Administrateur ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo [OK] Script de nettoyage configure pour le nouveau compte. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo [OK] Outil de finalisation prepare. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo copy \"C:\\ProgramData\\SuperNova\\NettoyageFinal.bat\" \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo ======================================================== >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -623,7 +625,7 @@ function executeReset() {
             "echo echo Le PC va redemarrer dans 15 secondes. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo 1. Connectez-vous avec votre nouveau compte. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo 2. Double-cliquez sur \"NettoyageFinal\" sur le bureau. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo 3. Cela supprimera le compte SuperNovaAdmin pour securiser le PC. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo 3. Lancez l'outil de finalisation. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo ======================================================== >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo shutdown /r /t 15 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo timeout /t 14 /nobreak ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -647,7 +649,7 @@ function executeReset() {
             "echo set /p adminPass=\"Mot de passe : \" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo if \"%%adminPass%%\"==\"\" goto :PWD_LOOP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo net user SuperNovaAdmin \"%%adminPass%%\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo [OK] Mot de passe enregistre. Vous pouvez renommer ce compte dans Parametres Windows. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo [OK] Mot de passe enregistre. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo Le PC va redemarrer dans 15 secondes... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo shutdown /r /t 15 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -659,22 +661,23 @@ function executeReset() {
             "echo.\r\n" +
             "echo.\r\n" +
             "echo =========================================\r\n" +
-            "echo  Generation de NettoyageFinal.bat...\r\n" +
+            "echo  Preparation de l'outil de finalisation...\r\n" +
             "echo =========================================\r\n" +
             "set \"NF=C:\\ProgramData\\SuperNova\\NettoyageFinal.bat\"\r\n" +
             "mkdir \"C:\\ProgramData\\SuperNova\" 2>nul\r\n" +
             "echo @echo off > \"%NF%\"\r\n" +
-            "echo color 1F >> \"%NF%\"\r\n" +
+            "echo color 0F >> \"%NF%\"\r\n" +
+            "echo mode con cols=84 lines=34 >> \"%NF%\"\r\n" +
             "echo title SUPER NOVA - Nettoyage Final >> \"%NF%\"\r\n" +
             "echo cls >> \"%NF%\"\r\n" +
             "echo fsutil dirty query %%systemdrive%% ^>nul >> \"%NF%\"\r\n" +
             "echo if %%errorLevel%% NEQ 0 ( >> \"%NF%\"\r\n" +
-            "echo     echo Demande des privileges administrateur... >> \"%NF%\"\r\n" +
+            "echo     echo Demande d'autorisation... >> \"%NF%\"\r\n" +
             "echo     powershell -Command \"Start-Process '%%~f0' -Verb RunAs\" >> \"%NF%\"\r\n" +
             "echo     exit /b >> \"%NF%\"\r\n" +
             "echo ) >> \"%NF%\"\r\n" +
             "echo echo ========================================= >> \"%NF%\"\r\n" +
-            "echo echo  SUPER NOVA - Nettoyage Final >> \"%NF%\"\r\n" +
+            "echo echo    SUPER NOVA - Finalisation >> \"%NF%\"\r\n" +
             "echo echo ========================================= >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
             "echo echo Voulez-vous supprimer le compte temporaire SuperNovaAdmin ? (O/N) >> \"%NF%\"\r\n" +
@@ -725,7 +728,7 @@ function executeReset() {
             "echo set /p adminPass=\"Veuillez definir un mot de passe pour le securiser : \" >> \"%NF%\"\r\n" +
             "echo if \"%%adminPass%%\"==\"\" goto :PWD_LOOP2 >> \"%NF%\"\r\n" +
             "echo net user SuperNovaAdmin \"%%adminPass%%\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo echo [OK] Mot de passe enregistre. Vous pouvez renommer ce compte dans Parametres. >> \"%NF%\"\r\n" +
+            "echo echo [OK] Mot de passe enregistre. >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
             "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo del \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
@@ -734,17 +737,17 @@ function executeReset() {
             "echo timeout /t 14 /nobreak ^>nul >> \"%NF%\"\r\n" +
             "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%NF%\"\r\n" +
             "echo.\r\n" +
-            "echo [OK] Script de nettoyage genere.\r\n" +
+            "echo [OK] Outil de finalisation genere.\r\n" +
             "echo.\r\n" +
-            "echo [OK] Outil de recuperation installe sur le Bureau.\r\n" +
+            "echo [OK] Outil de transfert installe sur le Bureau.\r\n" +
             "echo.\r\n" +
             "echo =========================================\r\n" +
             "echo  PROCHAINES ETAPES :\r\n" +
             "echo =========================================\r\n" +
             "echo 1. Le PC va redemarrer automatiquement.\r\n" +
-            "echo 2. Connectez-vous au compte \"SuperNovaAdmin\" (sans mot de passe).\r\n" +
-            "echo 3. Double-cliquez sur \"CopyData\" sur le Bureau.\r\n" +
-            "echo 4. Vos fichiers seront transferes dans le nouveau compte.\r\n" +
+            "echo 2. Connectez-vous au compte \"SuperNovaAdmin\".\r\n" +
+            "echo 3. Lancez \"CopyData\" sur le Bureau.\r\n" +
+            "echo 4. Vos fichiers seront transferes.\r\n" +
             "echo.\r\n" +
             "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
             "echo Redemarrage dans 15 secondes...\r\n" +
