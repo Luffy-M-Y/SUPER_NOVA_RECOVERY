@@ -16,61 +16,74 @@
     SYSMENU="yes"
     WINDOWSTATE="normal"
     SCROLL="no"
+    INNERBORDER="no"
 />
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #171717;
+}
+
 body {
-    background: #0a0e1a;
-    color: #e0e0e0;
-    font-family: 'Segoe UI', sans-serif;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    color: #f2f2f2;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
     overflow: hidden;
+    display: table;
+    width: 100%;
+    height: 100%;
+}
+
+#app-wrapper {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
 }
 
 #app {
-    width: 520px;
-    background: #111827;
-    border: 1px solid #1e3a5f;
-    border-radius: 12px;
-    padding: 36px 40px;
-    box-shadow: 0 0 40px rgba(58, 123, 213, 0.15);
+    display: inline-block;
+    text-align: left;
+    width: 90%;
+    max-width: 860px;
+    background: #202020;
+    border: 1px solid #363636;
+    border-radius: 10px;
+    padding: 36px 56px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+    overflow-y: auto;
 }
 
 .logo {
     text-align: center;
-    margin-bottom: 28px;
+    margin-bottom: 30px;
 }
 
 .logo h1 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #3a7bd5;
-    letter-spacing: 2px;
+    font-size: 21px;
+    font-weight: 600;
+    color: #f2f2f2;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
 }
 
 .logo p {
     font-size: 12px;
-    color: #4a5568;
-    margin-top: 4px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    color: #8f8f8f;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
 }
 
-/* Écrans */
 .screen { display: none; }
 .screen.active { display: block; }
 
-/* Status box */
 .status-box {
-    background: #0d1526;
-    border: 1px solid #1e3a5f;
-    border-radius: 8px;
+    background: #282828;
+    border: 1px solid #363636;
+    border-radius: 7px;
     padding: 16px 20px;
     margin-bottom: 20px;
     font-size: 13px;
@@ -79,96 +92,99 @@ body {
 }
 
 .status-box .label {
-    color: #4a5568;
-    font-size: 11px;
+    color: #858585;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 8px;
 }
 
-.found { color: #48bb78; }
-.error { color: #fc8181; }
-.warn  { color: #f6ad55; }
-.info  { color: #63b3ed; }
+.found { color: #4caf7d; }
+.error { color: #d96c6c; }
+.warn  { color: #d6a354; }
+.info  { color: #8aaee8; }
 
-/* Boutons */
 .btn {
     width: 100%;
-    padding: 14px;
+    padding: 13px 14px;
     border: none;
-    border-radius: 8px;
-    font-size: 14px;
+    border-radius: 6px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    letter-spacing: 0.3px;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
-.btn:hover { opacity: 0.85; }
+.btn:hover { opacity: 0.9; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.btn-primary { background: #3a7bd5; color: #fff; }
-.btn-danger  { background: #c53030; color: #fff; }
-.btn-ghost   { background: transparent; color: #4a5568; border: 1px solid #1e3a5f; margin-top: 10px; }
+.btn-primary { background: #5b8def; color: #fff; }
+.btn-primary:hover { background: #6797f2; }
 
-/* Compte list */
+.btn-danger  { background: #b85c5c; color: #fff; }
+.btn-danger:hover { background: #c26666; }
+
+.btn-ghost   { background: transparent; color: #a6a6a6; border: 1px solid #3a3a3a; margin-top: 10px; }
+.btn-ghost:hover { background: #292929; color: #d8d8d8; }
+
 #accounts-list {
-    max-height: 180px;
+    max-height: 220px;
     overflow-y: auto;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     padding-right: 5px;
 }
+
 .account-item {
-    background: #0d1526;
-    border: 1px solid #1e3a5f;
+    background: #282828;
+    border: 1px solid #373737;
     border-radius: 6px;
     padding: 12px 16px;
     margin-bottom: 8px;
     cursor: pointer;
-    transition: border-color 0.2s;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
     font-size: 13px;
 }
 
-.account-item:hover { border-color: #3a7bd5; }
-.account-item.selected { border-color: #3a7bd5; background: #0f1f3d; }
+.account-item:hover { background: #2d2d2d; border-color: #4a4a4a; }
+.account-item.selected { background: #29364d; border-color: #5b8def; }
 
-.account-item .acc-name { font-weight: 600; color: #e0e0e0; }
-.account-item .acc-type { font-size: 11px; color: #4a5568; margin-top: 2px; }
+.account-item .acc-name { font-weight: 600; color: #eeeeee; }
+.account-item .acc-type { font-size: 11px; color: #929292; margin-top: 3px; }
 
-/* Warning */
 .warning-box {
-    background: #1a1200;
-    border: 1px solid #744210;
-    border-radius: 8px;
+    background: #2b261c;
+    border: 1px solid #5b4a2f;
+    border-radius: 7px;
     padding: 12px 16px;
     font-size: 12px;
-    color: #f6ad55;
+    color: #d6a354;
     margin-bottom: 20px;
     line-height: 1.6;
 }
 
-/* Steps (écran résultat) */
+.warning-box strong { color: #e0bd7d; }
+
 .steps {
-    background: #0d1526;
-    border: 1px solid #1e3a5f;
-    border-radius: 8px;
+    background: #282828;
+    border: 1px solid #363636;
+    border-radius: 7px;
     padding: 16px 20px;
     margin-bottom: 20px;
     font-size: 12px;
     line-height: 2;
-    color: #a0aec0;
+    color: #a6a6a6;
 }
 
-.steps .step-done { color: #48bb78; }
-.steps .step-title { color: #e0e0e0; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+.steps .step-done { color: #4caf7d; }
+.steps .step-title { color: #eeeeee; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
 
-/* Spinner */
 .spinner {
     display: inline-block;
     width: 14px; height: 14px;
-    border: 2px solid #1e3a5f;
-    border-top-color: #3a7bd5;
+    border: 2px solid #3a3a3a;
+    border-top-color: #5b8def;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     vertical-align: middle;
@@ -177,8 +193,8 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .section-title {
-    font-size: 11px;
-    color: #4a5568;
+    font-size: 10px;
+    color: #858585;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 12px;
@@ -187,6 +203,7 @@ body {
 </head>
 <body>
 
+<div id="app-wrapper">
 <div id="app">
     <div class="logo">
         <h1>⚡ SUPER NOVA RECOVERY</h1>
@@ -241,9 +258,10 @@ body {
     <div id="screen-result" class="screen">
         <div class="status-box" id="result-status"></div>
         <div class="steps" id="result-steps"></div>
-        <button class="btn btn-primary" onclick="reboot()">↺ Redémarrer le PC</button>
+        <button class="btn btn-primary" id="btn-reboot" style="display:none;" onclick="reboot()">↺ Redémarrer le PC</button>
         <button class="btn btn-ghost" onclick="showScreen('screen-detect')">Recommencer</button>
     </div>
+</div>
 </div>
 
 <script language="VBScript">
@@ -352,10 +370,26 @@ function showScreen(id) {
         document.getElementById(screenIds[i]).className = "screen";
     }
     document.getElementById(id).className = "screen active";
+    if (id === "screen-accounts") {
+        selectedAccount = "";
+        document.getElementById("btn-reset").disabled = true;
+        document.getElementById("btn-reset").style.border = "";
+        var err = document.getElementById("no-account-error");
+        if (err) err.parentNode.removeChild(err);
+    }
 }
 
 // ─── Détection au chargement ──────────────────────────────────────────────────
 window.onload = function() {
+    var w = Math.round(screen.width  * 0.75);
+    var h = Math.round(screen.height * 0.80);
+    window.resizeTo(w, h);
+    window.moveTo(
+        Math.round((screen.width  - w) / 2),
+        Math.round((screen.height - h) / 2)
+    );
+    document.getElementById("app").style.maxHeight = Math.round(h * 0.88) + "px";
+    document.getElementById("accounts-list").style.maxHeight = Math.round(h * 0.30) + "px";
     setTimeout(detectWindows, 500);
 };
 
@@ -415,7 +449,7 @@ function renderAccounts() {
         var div = document.createElement("div");
         div.className = "account-item";
         div.setAttribute("data-name", name);
-        div.innerHTML = '<div class="acc-name">👤 ' + name + '</div><div class="acc-type">' + (isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte local") + '</div>';
+        div.innerHTML = '<div class="acc-name">👤 ' + name + '</div><div class="acc-type">' + (isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte Windows") + '</div>';
         div.onclick = function() { selectAccount(this); };
         list.appendChild(div);
     }
@@ -430,13 +464,27 @@ function selectAccount(el) {
     el.className = "account-item selected";
     selectedAccount = el.getAttribute("data-name");
     document.getElementById("btn-reset").disabled = false;
+    document.getElementById("btn-reset").style.border = "";
+    var err = document.getElementById("no-account-error");
+    if (err) err.parentNode.removeChild(err);
 }
 
 function confirmReset() {
-    if (!selectedAccount) return;
-    document.getElementById("confirm-account").textContent = "👤 " + selectedAccount;
+    if (!selectedAccount) {
+        document.getElementById("btn-reset").style.border = "2px solid #fc8181";
+        var existing = document.getElementById("no-account-error");
+        if (!existing) {
+            var err = document.createElement("div");
+            err.id = "no-account-error";
+            err.style.cssText = "color:#d96c6c;font-size:12px;margin-top:8px;text-align:center;";
+            err.textContent = "\u26a0 Veuillez s\u00e9lectionner un compte avant de continuer.";
+            document.getElementById("btn-reset").parentNode.insertBefore(err, document.getElementById("btn-reset").nextSibling);
+        }
+        return;
+    }
+    document.getElementById("confirm-account").innerHTML = "&#128100; " + selectedAccount;
     var isAdmin = (selectedAccount.toLowerCase() === "administrateur" || selectedAccount.toLowerCase() === "administrator");
-    document.getElementById("confirm-type").textContent = isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte local \u2014 " + windowsDrive + ":\\Windows";
+    document.getElementById("confirm-type").innerHTML = isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte Windows \u2014 " + windowsDrive + ":\\Windows";
     showScreen("screen-confirm");
 }
 
@@ -741,26 +789,31 @@ function executeReset() {
 
 function renderResult(success, steps) {
     document.getElementById("result-status").innerHTML = '<div class="label">R\u00e9sultat</div>' +
-        (success ? '<span class="found" style="font-size:15px;">✓ Op\u00e9ration r\u00e9ussie !</span>' : '<span class="error" style="font-size:15px;">✗ Op\u00e9ration \u00e9chou\u00e9e</span>');
-    var html = '<div class="step-title">\u00c9tapes effectu\u00e9es</div>';
-    for (var i = 0; i < steps.length; i++) {
-        var cls = steps[i].charAt(0) === "✓" ? "step-done" : steps[i].charAt(0) === "⚠" ? "warn" : "error";
-        html += '<div class="' + cls + '">' + steps[i] + '</div>';
-    }
+        (success
+            ? '<span class="found" style="font-size:18px;font-weight:700;">\u2713 Pr\u00eat ! Suivez les \u00e9tapes ci-dessous.</span>'
+            : '<span class="error" style="font-size:15px;">\u2717 Op\u00e9ration \u00e9chou\u00e9e</span><br>' + steps[steps.length-1]);
+
     if (success) {
-        html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #1e3a5f;color:#a0aec0;">' +
-            '<strong style="color:#e0e0e0;">Prochaines \u00e9tapes :</strong><br>' +
-            '1. Retirez la cl\u00e9 USB<br>2. Red\u00e9marrez le PC<br>' +
-            '3. Sur l\'\u00e9cran de login \u2192 appuyez <strong style="color:#3a7bd5;">5x sur Maj</strong><br>' +
-            '4. Suivez les instructions \u00e0 l\'\u00e9cran !' +
+        document.getElementById("btn-reboot").style.display = "block";
+        document.getElementById("result-steps").innerHTML =
+            '<div class="step-title" style="font-size:15px;margin-bottom:16px;">Prochaines \u00e9tapes</div>' +
+            '<div style="font-size:14px;line-height:2.2;color:#e0e0e0;">' +
+            '<div>1. \uD83D\uDD0C Retirez la cl\u00e9 USB</div>' +
+            '<div>2. \uD83D\uDD04 Red\u00e9marrez le PC</div>' +
+            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong style="color:#5b8def;font-size:16px;">5x sur Maj</strong></div>' +
+            '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran</div>' +
             '</div>';
+    } else {
+        document.getElementById("result-steps").innerHTML =
+            '<div class="error" style="font-size:13px;">' + steps.join('<br>') + '</div>';
     }
-    document.getElementById("result-steps").innerHTML = html;
 }
 
 function reboot() {
-    RunCmd("shutdown /r /t 5 /c \"SUPER NOVA RECOVERY - Redemarrage\"");
-    document.getElementById("result-status").innerHTML = '<div class="label">Red\u00e9marrage</div><span class="info">\u21ba Red\u00e9marrage dans 5 secondes...</span>';
+    var shell = new ActiveXObject("WScript.Shell");
+    // Essaie d'abord shutdown (Windows normal), si échec (WinPE) utilise wpeutil
+    shell.Run("cmd.exe /c shutdown /r /t 5 || wpeutil reboot", 0, false);
+    document.getElementById("result-status").innerHTML = '<div class="label">Red\u00e9marrage</div><span class="info">\u21ba Red\u00e9marrage en cours...</span>';
 }
 </script>
 
