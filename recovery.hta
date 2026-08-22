@@ -541,7 +541,7 @@ function executeReset() {
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo if exist \"C:\\Backup_" + selectedAccount + "\\Bureau\" ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     echo [SUCCES] La sauvegarde a reussi ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo Vos fichiers sont dans : C:\\Backup_" + selectedAccount + " >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo     echo Vos fichiers sont prets pour le transfert final. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo ) else ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     echo [ERREUR] La sauvegarde a echoue ou aucun fichier n'a ete copie. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo     echo Si vous n'avez pas accepte la demande d'administrateur, >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -584,7 +584,16 @@ function executeReset() {
             "echo :KEEP_ADMIN >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo echo Vous avez choisi de garder le compte SuperNovaAdmin. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Veuillez definir un mot de passe OBLIGATOIRE pour le securiser. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo Transfert des donnees vers vos dossiers personnels... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Bureau\" \"%%USERPROFILE%%\\Desktop\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Documents\" \"%%USERPROFILE%%\\Documents\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Images\" \"%%USERPROFILE%%\\Pictures\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Telechargements\" \"%%USERPROFILE%%\\Downloads\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Videos\" \"%%USERPROFILE%%\\Videos\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo rd /s /q \"C:\\Backup_" + selectedAccount + "\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo [OK] Transfert termine avec succes ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
+            "echo echo Veuillez definir un mot de passe OBLIGATOIRE pour securiser le compte. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo :PWD_LOOP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo set \"adminPass=\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
             "echo set /p adminPass=\"Mot de passe : \" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
@@ -626,16 +635,24 @@ function executeReset() {
             "echo goto :SKIP_CLEAN >> \"%NF%\"\r\n" +
             "echo :DO_CLEAN >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
+            "echo echo Transfert des donnees vers votre nouveau compte... >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Bureau\" \"%%USERPROFILE%%\\Desktop\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Documents\" \"%%USERPROFILE%%\\Documents\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Images\" \"%%USERPROFILE%%\\Pictures\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Telechargements\" \"%%USERPROFILE%%\\Downloads\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Videos\" \"%%USERPROFILE%%\\Videos\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo rd /s /q \"C:\\Backup_" + selectedAccount + "\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo echo [OK] Transfert termine avec succes ! >> \"%NF%\"\r\n" +
+            "echo echo. >> \"%NF%\"\r\n" +
             "echo echo Suppression du compte SuperNovaAdmin... >> \"%NF%\"\r\n" +
-            "echo net user SuperNovaAdmin /delete >> \"%NF%\"\r\n" +
+            "echo net user SuperNovaAdmin /delete ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo rd /s /q \"C:\\Users\\SuperNovaAdmin\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo del \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
             "echo echo [OK] Compte SuperNovaAdmin supprime avec succes ! >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Vos donnees recuperees se trouvent dans : C:\\Backup_" + selectedAccount + " >> \"%NF%\"\r\n" +
-            "echo echo Vous pouvez les copier sur une cle USB ou les deplacer. >> \"%NF%\"\r\n" +
+            "echo echo Vos donnees ont ete deplacees dans vos dossiers personnels. >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
             "echo echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications. >> \"%NF%\"\r\n" +
             "echo shutdown /r /t 15 >> \"%NF%\"\r\n" +
@@ -645,6 +662,15 @@ function executeReset() {
             "echo :SKIP_CLEAN >> \"%NF%\"\r\n" +
             "echo echo. >> \"%NF%\"\r\n" +
             "echo echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin. >> \"%NF%\"\r\n" +
+            "echo echo Transfert des donnees vers le compte SuperNovaAdmin... >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Bureau\" \"C:\\Users\\SuperNovaAdmin\\Desktop\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Documents\" \"C:\\Users\\SuperNovaAdmin\\Documents\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Images\" \"C:\\Users\\SuperNovaAdmin\\Pictures\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Telechargements\" \"C:\\Users\\SuperNovaAdmin\\Downloads\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Videos\" \"C:\\Users\\SuperNovaAdmin\\Videos\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo rd /s /q \"C:\\Backup_" + selectedAccount + "\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
+            "echo echo [OK] Transfert termine avec succes ! >> \"%NF%\"\r\n" +
+            "echo echo. >> \"%NF%\"\r\n" +
             "echo echo Ce compte n'a actuellement pas de mot de passe. >> \"%NF%\"\r\n" +
             "echo :PWD_LOOP2 >> \"%NF%\"\r\n" +
             "echo set \"adminPass=\" >> \"%NF%\"\r\n" +
@@ -670,7 +696,7 @@ function executeReset() {
             "echo 1. Le PC va redemarrer automatiquement.\r\n" +
             "echo 2. Connectez-vous au compte \"SuperNovaAdmin\" (sans mot de passe).\r\n" +
             "echo 3. Double-cliquez sur \"CopyData\" sur le Bureau.\r\n" +
-            "echo 4. Vos fichiers seront copies dans C:\\Backup_" + selectedAccount + "\r\n" +
+            "echo 4. Vos fichiers seront transferes dans le nouveau compte.\r\n" +
             "echo.\r\n" +
             "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
             "echo Redemarrage dans 15 secondes...\r\n" +
