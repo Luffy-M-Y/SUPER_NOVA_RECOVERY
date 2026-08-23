@@ -358,7 +358,12 @@ timeout /t 14 /nobreak >nul
 goto :CLEANUP
 
 :QUIT
+echo.
+echo Vous avez choisi de quitter.
+echo L'ordinateur va redemarrer dans 10 secondes...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+shutdown /r /t 10
+timeout /t 4 /nobreak >nul
 goto :CLEANUP
 
 :CLEANUP
