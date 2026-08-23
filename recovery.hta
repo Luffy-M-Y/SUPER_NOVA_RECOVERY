@@ -57,11 +57,7 @@ body {
     overflow-y: auto;
 }
 
-.logo {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
+.logo { text-align: center; margin-bottom: 30px; }
 .logo h1 {
     font-size: 21px;
     font-weight: 600;
@@ -69,7 +65,6 @@ body {
     letter-spacing: 1.5px;
     text-transform: uppercase;
 }
-
 .logo p {
     font-size: 12px;
     color: #8f8f8f;
@@ -79,6 +74,7 @@ body {
 
 .screen { display: none; }
 .screen.active { display: block; }
+.hidden { display: none !important; }
 
 .status-box {
     background: #282828;
@@ -90,7 +86,6 @@ body {
     line-height: 1.8;
     min-height: 80px;
 }
-
 .status-box .label {
     color: #858585;
     font-size: 10px;
@@ -116,18 +111,15 @@ body {
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
-
 .btn:hover { opacity: 0.9; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
 .btn-primary { background: #5b8def; color: #fff; }
 .btn-primary:hover { background: #6797f2; }
-
 .btn-danger  { background: #b85c5c; color: #fff; }
 .btn-danger:hover { background: #c26666; }
-
 .btn-ghost   { background: transparent; color: #a6a6a6; border: 1px solid #3a3a3a; margin-top: 10px; }
 .btn-ghost:hover { background: #292929; color: #d8d8d8; }
+.btn-invalid { border: 2px solid #fc8181; }
 
 #accounts-list {
     max-height: 220px;
@@ -135,7 +127,6 @@ body {
     margin-bottom: 14px;
     padding-right: 5px;
 }
-
 .account-item {
     background: #282828;
     border: 1px solid #373737;
@@ -146,10 +137,8 @@ body {
     transition: background-color 0.15s ease, border-color 0.15s ease;
     font-size: 13px;
 }
-
 .account-item:hover { background: #2d2d2d; border-color: #4a4a4a; }
 .account-item.selected { background: #29364d; border-color: #5b8def; }
-
 .account-item .acc-name { font-weight: 600; color: #eeeeee; }
 .account-item .acc-type { font-size: 11px; color: #929292; margin-top: 3px; }
 
@@ -163,7 +152,6 @@ body {
     margin-bottom: 20px;
     line-height: 1.6;
 }
-
 .warning-box strong { color: #e0bd7d; }
 
 .steps {
@@ -176,9 +164,16 @@ body {
     line-height: 2;
     color: #a6a6a6;
 }
-
 .steps .step-done { color: #4caf7d; }
 .steps .step-title { color: #eeeeee; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+.steps .step-title-lg { font-size: 15px; margin-bottom: 16px; }
+.next-steps { font-size: 14px; line-height: 2.2; color: #e0e0e0; }
+.hl { color: #5b8def; font-size: 16px; }
+.result-ok { font-size: 18px; font-weight: 700; }
+.result-fail { font-size: 15px; }
+.confirm-name { font-size: 15px; font-weight: 600; color: #e0e0e0; }
+.confirm-type { font-size: 12px; color: #8f8f8f; margin-top: 4px; }
+.inline-error { color: #d96c6c; font-size: 12px; margin-top: 8px; text-align: center; }
 
 .spinner {
     display: inline-block;
@@ -210,7 +205,6 @@ body {
         <p>Réinitialisation de mot de passe Windows</p>
     </div>
 
-    <!-- ÉCRAN 1 : Détection -->
     <div id="screen-detect" class="screen active">
         <div class="status-box">
             <div class="label">Statut de détection</div>
@@ -223,7 +217,6 @@ body {
         </button>
     </div>
 
-    <!-- ÉCRAN 2 : Sélection du compte -->
     <div id="screen-accounts" class="screen">
         <div class="section-title">Comptes détectés sur <span id="drive-label"></span></div>
         <div id="accounts-list"></div>
@@ -237,12 +230,11 @@ body {
         <button class="btn btn-ghost" onclick="showScreen('screen-detect')">← Retour</button>
     </div>
 
-    <!-- ÉCRAN 3 : Confirmation -->
     <div id="screen-confirm" class="screen">
         <div class="status-box">
             <div class="label">Compte sélectionné</div>
-            <div id="confirm-account" style="font-size:15px; font-weight:600; color:#e0e0e0;"></div>
-            <div id="confirm-type" style="font-size:12px; color:#4a5568; margin-top:4px;"></div>
+            <div id="confirm-account" class="confirm-name"></div>
+            <div id="confirm-type" class="confirm-type"></div>
         </div>
         <div class="warning-box">
             ⚠️ Cette opération va modifier des fichiers système Windows.<br>
@@ -254,18 +246,272 @@ body {
         <button class="btn btn-ghost" onclick="showScreen('screen-accounts')">← Annuler</button>
     </div>
 
-    <!-- ÉCRAN 4 : Résultat -->
     <div id="screen-result" class="screen">
         <div class="status-box" id="result-status"></div>
         <div class="steps" id="result-steps"></div>
-        <button class="btn btn-primary" id="btn-reboot" style="display:none;" onclick="reboot()">↺ Redémarrer le PC</button>
+        <button class="btn btn-primary hidden" id="btn-reboot" onclick="reboot()">↺ Redémarrer le PC</button>
         <button class="btn btn-ghost" onclick="showScreen('screen-detect')">Recommencer</button>
     </div>
 </div>
 </div>
 
+<div id="payload-templates" class="hidden">
+<textarea id="tpl-recovery-script">@echo off
+color 0F
+mode con cols=84 lines=34
+title SUPER NOVA RECOVERY
+cls
+echo =========================================
+echo          SUPER NOVA RECOVERY
+echo =========================================
+echo.
+echo Compte cible : {{ACCOUNT}}
+echo.
+set /p newpwd="Entrez le nouveau mot de passe : "
+echo.
+net user "{{ACCOUNT}}" %newpwd%
+if %ERRORLEVEL% EQU 0 goto :SUCCESS
+goto :MS_ACCOUNT
+
+:SUCCESS
+echo.
+echo [SUCCES] Le mot de passe a ete reinitialise !
+echo Finalisation en cours...
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+echo L'ordinateur va redemarrer dans 10 secondes pour appliquer les changements.
+shutdown /r /t 10
+pause
+goto :CLEANUP
+
+:MS_ACCOUNT
+echo.
+echo =========================================
+echo  COMPTE MICROSOFT DETECTE
+echo =========================================
+echo.
+echo Ce compte est lie a Microsoft.
+echo Pour changer le mot de passe, rendez-vous sur :
+echo    https://account.live.com/password/reset
+echo.
+echo Cependant, vous pouvez recuperer vos donnees !
+echo.
+echo 1 - Recuperer mes donnees (creer un compte de secours)
+echo 2 - Quitter
+echo.
+set /p choice="Choix : "
+if "%choice%"=="1" goto :RECOVER
+goto :QUIT
+
+:RECOVER
+echo.
+echo Creation du compte SuperNovaAdmin...
+net user SuperNovaAdmin "" /add >nul 2>&amp;1
+net localgroup Administrateurs SuperNovaAdmin /add >nul 2>&amp;1
+net localgroup Administrators SuperNovaAdmin /add >nul 2>&amp;1
+echo [OK] Compte SuperNovaAdmin cree avec succes.
+echo.
+echo Preparation de l'outil de transfert...
+mkdir "C:\ProgramData\SuperNova" 2>nul
+copy /Y "{{SN_FOLDER}}\CopyData.bat" "%public%\Desktop\CopyData.bat" >nul
+copy /Y "{{SN_FOLDER}}\NettoyageFinal.bat" "C:\ProgramData\SuperNova\NettoyageFinal.bat" >nul
+echo [OK] Outil de finalisation genere.
+echo.
+echo [OK] Outil de transfert installe sur le Bureau.
+echo.
+echo =========================================
+echo  PROCHAINES ETAPES :
+echo =========================================
+echo 1. Le PC va redemarrer automatiquement.
+echo 2. Connectez-vous au compte "SuperNovaAdmin".
+echo 3. Lancez "CopyData" sur le Bureau.
+echo 4. Vos fichiers seront transferes.
+echo.
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+echo Redemarrage dans 15 secondes...
+shutdown /r /t 15
+timeout /t 14 /nobreak >nul
+goto :CLEANUP
+
+:QUIT
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+goto :CLEANUP
+
+:CLEANUP
+(goto) 2>nul &amp; del "%~f0" &amp; rd /s /q "{{SN_FOLDER}}"
+</textarea>
+<textarea id="tpl-copy-data">@echo off
+color 0F
+mode con cols=84 lines=34
+title SUPER NOVA - Recuperation de donnees
+cls
+fsutil dirty query %systemdrive% >nul
+if %errorLevel% NEQ 0 (
+    echo Demande d'autorisation...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+echo =========================================
+echo    SUPER NOVA - Recuperation de donnees
+echo =========================================
+echo.
+echo Copie de vos fichiers en cours...
+echo.
+mkdir "C:\Backup_{{ACCOUNT}}" 2>nul
+robocopy "C:\Users\{{ACCOUNT}}\Desktop" "C:\Backup_{{ACCOUNT}}\Bureau" /E /MT:8 /R:1 /W:1 /NP
+robocopy "C:\Users\{{ACCOUNT}}\Documents" "C:\Backup_{{ACCOUNT}}\Documents" /E /MT:8 /R:1 /W:1 /NP
+robocopy "C:\Users\{{ACCOUNT}}\Pictures" "C:\Backup_{{ACCOUNT}}\Images" /E /MT:8 /R:1 /W:1 /NP
+robocopy "C:\Users\{{ACCOUNT}}\Downloads" "C:\Backup_{{ACCOUNT}}\Telechargements" /E /MT:8 /R:1 /W:1 /NP
+robocopy "C:\Users\{{ACCOUNT}}\Videos" "C:\Backup_{{ACCOUNT}}\Videos" /E /MT:8 /R:1 /W:1 /NP
+echo.
+echo =========================================
+echo  COPIE TERMINEE !
+echo =========================================
+echo.
+if exist "C:\Backup_{{ACCOUNT}}\Bureau" (
+    echo [SUCCES] La sauvegarde a reussi !
+    echo Vos fichiers sont prets pour le transfert final.
+) else (
+    echo [ERREUR] La sauvegarde a echoue ou aucun fichier n'a ete copie.
+    echo Si vous n'avez pas accepte la demande d'autorisation,
+    echo veuillez relancer le programme.
+    pause
+    exit /b
+)
+echo.
+echo ========================================================
+echo Voulez-vous creer un NOUVEAU compte permanent pour utiliser ce PC ? (O/N)
+set /p createAccount="Choix : "
+if /I "%createAccount%"=="O" goto :CREATE_ACCOUNT
+if /I "%createAccount%"=="N" goto :KEEP_ADMIN
+goto :END_SCRIPT
+
+:CREATE_ACCOUNT
+echo.
+set /p newUser="Nom du nouveau compte : "
+set /p newPass="Mot de passe (Notez-le bien !) : "
+net user "%newUser%" "%newPass%" /add >nul 2>&amp;1
+net localgroup Administrateurs "%newUser%" /add >nul 2>&amp;1
+net localgroup Administrators "%newUser%" /add >nul 2>&amp;1
+echo [OK] Le compte %newUser% a ete cree avec succes et est Administrateur !
+echo.
+echo [OK] Outil de finalisation prepare.
+copy "C:\ProgramData\SuperNova\NettoyageFinal.bat" "C:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+echo.
+echo ========================================================
+echo FELICITATIONS ! Votre nouveau compte a ete cree.
+echo.
+echo Le PC va redemarrer dans 15 secondes.
+echo 1. Connectez-vous avec votre nouveau compte.
+echo 2. Double-cliquez sur "NettoyageFinal" sur le bureau.
+echo 3. Lancez l'outil de finalisation.
+echo ========================================================
+shutdown /r /t 15
+timeout /t 14 /nobreak >nul
+(goto) 2>nul &amp; del "%~f0"
+
+:KEEP_ADMIN
+echo.
+echo Vous avez choisi de garder le compte SuperNovaAdmin.
+echo Transfert des donnees vers vos dossiers personnels...
+robocopy "C:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+rd /s /q "C:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
+echo [OK] Transfert termine avec succes !
+echo.
+echo Veuillez definir un mot de passe OBLIGATOIRE pour securiser le compte.
+:PWD_LOOP
+set "adminPass="
+set /p adminPass="Mot de passe : "
+if "%adminPass%"=="" goto :PWD_LOOP
+net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
+echo [OK] Mot de passe enregistre.
+rd /s /q "C:\ProgramData\SuperNova" >nul 2>&amp;1
+echo Le PC va redemarrer dans 15 secondes...
+shutdown /r /t 15
+timeout /t 14 /nobreak >nul
+(goto) 2>nul &amp; del "%~f0"
+
+:END_SCRIPT
+(goto) 2>nul &amp; del "%~f0"
+</textarea>
+<textarea id="tpl-nettoyage">@echo off
+color 0F
+mode con cols=84 lines=34
+title SUPER NOVA - Nettoyage Final
+cls
+fsutil dirty query %systemdrive% >nul
+if %errorLevel% NEQ 0 (
+    echo Demande d'autorisation...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+echo =========================================
+echo    SUPER NOVA - Finalisation
+echo =========================================
+echo.
+echo Voulez-vous supprimer le compte temporaire SuperNovaAdmin ? (O/N)
+set /p clean="Choix : "
+if /I "%clean%"=="O" goto :DO_CLEAN
+goto :SKIP_CLEAN
+:DO_CLEAN
+echo.
+echo Transfert des donnees vers votre nouveau compte...
+robocopy "C:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+rd /s /q "C:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
+echo [OK] Transfert termine avec succes !
+echo.
+echo Suppression du compte SuperNovaAdmin...
+net user SuperNovaAdmin /delete >nul 2>&amp;1
+rd /s /q "C:\Users\SuperNovaAdmin" >nul 2>&amp;1
+rd /s /q "C:\ProgramData\SuperNova" >nul 2>&amp;1
+del "C:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+echo.
+echo [OK] Compte SuperNovaAdmin supprime avec succes !
+echo.
+echo Vos donnees ont ete deplacees dans vos dossiers personnels.
+echo.
+echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
+shutdown /r /t 15
+del "%public%\Desktop\CopyData.bat" >nul 2>&amp;1
+timeout /t 14 /nobreak >nul
+(goto) 2>nul &amp; del "%~f0"
+:SKIP_CLEAN
+echo.
+echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin.
+echo Transfert des donnees vers le compte SuperNovaAdmin...
+robocopy "C:\Backup_{{ACCOUNT}}\Bureau" "C:\Users\SuperNovaAdmin\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Documents" "C:\Users\SuperNovaAdmin\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Images" "C:\Users\SuperNovaAdmin\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Telechargements" "C:\Users\SuperNovaAdmin\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "C:\Backup_{{ACCOUNT}}\Videos" "C:\Users\SuperNovaAdmin\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+rd /s /q "C:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
+echo [OK] Transfert termine avec succes !
+echo.
+echo Ce compte n'a actuellement pas de mot de passe.
+:PWD_LOOP2
+set "adminPass="
+set /p adminPass="Veuillez definir un mot de passe pour le securiser : "
+if "%adminPass%"=="" goto :PWD_LOOP2
+net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
+echo [OK] Mot de passe enregistre.
+echo.
+rd /s /q "C:\ProgramData\SuperNova" >nul 2>&amp;1
+del "C:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
+shutdown /r /t 15
+timeout /t 14 /nobreak >nul
+(goto) 2>nul &amp; del "%~f0"
+</textarea>
+</div>
+
 <script language="VBScript">
-' ─── Exécution de commandes système ───────────────────────────────────────────
 Function RunCmd(cmd)
     Dim shell
     Set shell = CreateObject("WScript.Shell")
@@ -273,11 +519,10 @@ Function RunCmd(cmd)
 End Function
 
 Function RunCmdOutput(cmd)
-    Dim shell, exec, output
+    Dim shell, exec
     Set shell = CreateObject("WScript.Shell")
     Set exec = shell.Exec("cmd.exe /c " & cmd)
-    output = exec.StdOut.ReadAll()
-    RunCmdOutput = output
+    RunCmdOutput = exec.StdOut.ReadAll()
 End Function
 
 Function FileExists(path)
@@ -286,13 +531,6 @@ Function FileExists(path)
     FileExists = fso.FileExists(path)
 End Function
 
-Function FolderExists(path)
-    Dim fso
-    Set fso = CreateObject("Scripting.FileSystemObject")
-    FolderExists = fso.FolderExists(path)
-End Function
-
-' ─── Détection de la partition Windows ────────────────────────────────────────
 Function FindWindowsDrive()
     Dim drives, d
     drives = Array("C", "D", "E", "F", "G", "H", "I")
@@ -305,25 +543,17 @@ Function FindWindowsDrive()
     FindWindowsDrive = ""
 End Function
 
-' ─── Lister les comptes depuis le registre SAM hors-ligne ─────────────────────
 Function GetAccounts(winDrive)
-    Dim result, output, lines, i, acc
-    
-    ' Charger le SAM hors-ligne
+    Dim output, lines, i, acc
     RunCmd "reg load HKLM\OFFLINE_SAM """ & winDrive & ":\Windows\System32\config\SAM"""
-    
-    ' Lister les noms de comptes
     output = RunCmdOutput("reg query ""HKLM\OFFLINE_SAM\SAM\Domains\Account\Users\Names""")
-    
     lines = Split(output, vbCrLf)
     Dim accounts()
     Dim count : count = 0
-    
+
     For i = 0 To UBound(lines)
         Dim line : line = Trim(lines(i))
-        ' reg query affiche HKEY_LOCAL_MACHINE et non HKLM
         If Left(line, 4) = "HKEY" Then
-            ' Extraire le nom du compte (dernière partie du chemin)
             Dim parts : parts = Split(line, "\")
             acc = parts(UBound(parts))
             If acc <> "" And acc <> "Names" Then
@@ -333,10 +563,9 @@ Function GetAccounts(winDrive)
             End If
         End If
     Next
-    
-    ' Décharger le SAM
+
     RunCmd "reg unload HKLM\OFFLINE_SAM"
-    
+
     If count = 0 Then
         GetAccounts = ""
     Else
@@ -344,7 +573,6 @@ Function GetAccounts(winDrive)
     End If
 End Function
 
-' ─── Vérifier si BitLocker est actif ──────────────────────────────────────────
 Function IsBitLockerActive(winDrive)
     Dim output
     output = RunCmdOutput("manage-bde -status " & winDrive & ":")
@@ -353,64 +581,89 @@ End Function
 </script>
 
 <script language="JavaScript">
-// ─── Gestionnaire d'erreurs global ────────────────────────────────────────────
 window.onerror = function(msg, url, line) {
     alert("ERREUR CRITIQUE : " + msg + "\nLigne : " + line);
-    return true; // Évite l'affichage de la fenêtre d'erreur standard d'IE
+    return true;
 };
 
 var selectedAccount = "";
 var windowsDrive = "";
 var accounts = [];
-
-// ─── Navigation entre écrans ──────────────────────────────────────────────────
 var screenIds = ["screen-detect", "screen-accounts", "screen-confirm", "screen-result"];
+
+function byId(id) {
+    return document.getElementById(id);
+}
+
+function isBuiltinAdmin(name) {
+    var n = String(name).toLowerCase();
+    return n === "administrateur" || n === "administrator";
+}
+
+function accountTypeLabel(name) {
+    return isBuiltinAdmin(name) ? "Administrateur int\u00e9gr\u00e9" : "Compte Windows";
+}
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function clearAccountError() {
+    var err = byId("no-account-error");
+    if (err) err.parentNode.removeChild(err);
+    byId("btn-reset").className = "btn btn-danger";
+}
+
 function showScreen(id) {
     for (var i = 0; i < screenIds.length; i++) {
-        document.getElementById(screenIds[i]).className = "screen";
+        byId(screenIds[i]).className = "screen";
     }
-    document.getElementById(id).className = "screen active";
+    byId(id).className = "screen active";
     if (id === "screen-accounts") {
         selectedAccount = "";
-        document.getElementById("btn-reset").disabled = true;
-        document.getElementById("btn-reset").style.border = "";
-        var err = document.getElementById("no-account-error");
-        if (err) err.parentNode.removeChild(err);
+        byId("btn-reset").disabled = true;
+        clearAccountError();
     }
 }
 
-// ─── Détection au chargement ──────────────────────────────────────────────────
+function setDetectStatus(html) {
+    byId("detect-status").innerHTML = html;
+}
+
 window.onload = function() {
-    var w = Math.round(screen.width  * 0.75);
+    var w = Math.round(screen.width * 0.75);
     var h = Math.round(screen.height * 0.80);
     window.resizeTo(w, h);
     window.moveTo(
-        Math.round((screen.width  - w) / 2),
+        Math.round((screen.width - w) / 2),
         Math.round((screen.height - h) / 2)
     );
-    document.getElementById("app").style.maxHeight = Math.round(h * 0.88) + "px";
-    document.getElementById("accounts-list").style.maxHeight = Math.round(h * 0.30) + "px";
+    byId("app").style.maxHeight = Math.round(h * 0.88) + "px";
+    byId("accounts-list").style.maxHeight = Math.round(h * 0.30) + "px";
     setTimeout(detectWindows, 500);
 };
 
 function detectWindows() {
-    var statusEl = document.getElementById("detect-status");
-    statusEl.innerHTML = '<span class="spinner"></span> Recherche en cours...';
+    setDetectStatus('<span class="spinner"></span> Recherche en cours...');
     try {
         var drive = FindWindowsDrive();
         if (drive === "") {
-            statusEl.innerHTML = '<span class="error">✗ Partition Windows introuvable.</span>';
+            setDetectStatus('<span class="error">\u2717 Partition Windows introuvable.</span>');
             return;
         }
         windowsDrive = drive;
         if (IsBitLockerActive(drive)) {
-            statusEl.innerHTML = '<span class="warn">⚠ BitLocker d\u00e9tect\u00e9 sur ' + drive + ':\\</span>';
+            setDetectStatus('<span class="warn">\u26a0 BitLocker d\u00e9tect\u00e9 sur ' + drive + ':\\</span>');
             return;
         }
-        statusEl.innerHTML = '<span class="found">✓ Windows trouv\u00e9 sur ' + drive + ':\\</span>';
+        setDetectStatus('<span class="found">\u2713 Windows trouv\u00e9 sur ' + drive + ':\\</span>');
         loadAccounts(drive);
-    } catch(e) {
-        statusEl.innerHTML = '<span class="error">✗ Erreur : ' + e.message + '</span>';
+    } catch (e) {
+        setDetectStatus('<span class="error">\u2717 Erreur : ' + e.message + '</span>');
     }
 }
 
@@ -418,405 +671,149 @@ function loadAccounts(drive) {
     try {
         var rawString = GetAccounts(drive);
         accounts = [];
-
         if (rawString !== "") {
             var splitted = rawString.split("|");
             for (var i = 0; i < splitted.length; i++) {
-                if (splitted[i] !== "") {
-                    accounts.push(splitted[i]);
-                }
+                if (splitted[i] !== "") accounts.push(splitted[i]);
             }
         }
-
         if (accounts.length === 0) {
-            document.getElementById("detect-status").innerHTML = '<span class="error">✗ Aucun compte trouv\u00e9.</span>';
+            setDetectStatus('<span class="error">\u2717 Aucun compte trouv\u00e9.</span>');
             return;
         }
-        document.getElementById("drive-label").textContent = drive + ":\\Windows";
+        byId("drive-label").textContent = drive + ":\\Windows";
         renderAccounts();
         showScreen("screen-accounts");
-    } catch(e) {
-        document.getElementById("detect-status").innerHTML = '<span class="error">✗ SAM illisible : ' + e.message + '</span>';
+    } catch (e) {
+        setDetectStatus('<span class="error">\u2717 SAM illisible : ' + e.message + '</span>');
     }
 }
 
 function renderAccounts() {
-    var list = document.getElementById("accounts-list");
+    var list = byId("accounts-list");
     list.innerHTML = "";
     for (var i = 0; i < accounts.length; i++) {
         var name = accounts[i];
-        var isAdmin = (name.toLowerCase() === "administrateur" || name.toLowerCase() === "administrator");
         var div = document.createElement("div");
         div.className = "account-item";
         div.setAttribute("data-name", name);
-        div.innerHTML = '<div class="acc-name">👤 ' + name + '</div><div class="acc-type">' + (isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte Windows") + '</div>';
+        div.innerHTML = '<div class="acc-name">\uD83D\uDC64 ' + escapeHtml(name) +
+            '</div><div class="acc-type">' + accountTypeLabel(name) + '</div>';
         div.onclick = function() { selectAccount(this); };
         list.appendChild(div);
     }
 }
 
 function selectAccount(el) {
-    var container = document.getElementById("accounts-list");
-    var divs = container.getElementsByTagName("div");
-    for (var i = 0; i < divs.length; i++) {
-        if (divs[i].parentNode === container) { divs[i].className = "account-item"; }
+    var kids = byId("accounts-list").children;
+    for (var i = 0; i < kids.length; i++) {
+        kids[i].className = "account-item";
     }
     el.className = "account-item selected";
     selectedAccount = el.getAttribute("data-name");
-    document.getElementById("btn-reset").disabled = false;
-    document.getElementById("btn-reset").style.border = "";
-    var err = document.getElementById("no-account-error");
-    if (err) err.parentNode.removeChild(err);
+    byId("btn-reset").disabled = false;
+    clearAccountError();
 }
 
 function confirmReset() {
     if (!selectedAccount) {
-        document.getElementById("btn-reset").style.border = "2px solid #fc8181";
-        var existing = document.getElementById("no-account-error");
-        if (!existing) {
+        byId("btn-reset").className = "btn btn-danger btn-invalid";
+        if (!byId("no-account-error")) {
             var err = document.createElement("div");
             err.id = "no-account-error";
-            err.style.cssText = "color:#d96c6c;font-size:12px;margin-top:8px;text-align:center;";
+            err.className = "inline-error";
             err.textContent = "\u26a0 Veuillez s\u00e9lectionner un compte avant de continuer.";
-            document.getElementById("btn-reset").parentNode.insertBefore(err, document.getElementById("btn-reset").nextSibling);
+            byId("btn-reset").parentNode.insertBefore(err, byId("btn-reset").nextSibling);
         }
         return;
     }
-    document.getElementById("confirm-account").innerHTML = "&#128100; " + selectedAccount;
-    var isAdmin = (selectedAccount.toLowerCase() === "administrateur" || selectedAccount.toLowerCase() === "administrator");
-    document.getElementById("confirm-type").innerHTML = isAdmin ? "Administrateur int\u00e9gr\u00e9" : "Compte Windows \u2014 " + windowsDrive + ":\\Windows";
+    byId("confirm-account").innerHTML = "&#128100; " + escapeHtml(selectedAccount);
+    byId("confirm-type").innerHTML = isBuiltinAdmin(selectedAccount)
+        ? "Administrateur int\u00e9gr\u00e9"
+        : "Compte Windows \u2014 " + windowsDrive + ":\\Windows";
     showScreen("screen-confirm");
+}
+
+function fillTemplate(id, account, snFolder) {
+    return byId(id).value
+        .replace(/\{\{ACCOUNT\}\}/g, account)
+        .replace(/\{\{SN_FOLDER\}\}/g, snFolder);
+}
+
+function ensureFolder(path) {
+    var fso = new ActiveXObject("Scripting.FileSystemObject");
+    if (!fso.FolderExists(path)) fso.CreateFolder(path);
+}
+
+function writeTextFile(path, content) {
+    var fso = new ActiveXObject("Scripting.FileSystemObject");
+    var file = fso.CreateTextFile(path, true);
+    file.Write(content);
+    file.Close();
 }
 
 function executeReset() {
     showScreen("screen-result");
-    document.getElementById("result-status").innerHTML = '<div class="label">Op\u00e9ration en cours</div><span class="spinner"></span> Application des modifications...';
-    document.getElementById("result-steps").innerHTML = "";
+    byId("result-status").innerHTML = '<div class="label">Op\u00e9ration en cours</div><span class="spinner"></span> Application des modifications...';
+    byId("result-steps").innerHTML = "";
+    byId("btn-reboot").className = "btn btn-primary hidden";
     try {
-        var drive = windowsDrive;
+        var peFolder = windowsDrive + ":\\SuperNova";
+        var bootFolder = "C:\\SuperNova";
         var steps = [];
         var success = true;
 
-        // 1. Création du dossier C:\SuperNova
-        var snFolder = drive + ":\\SuperNova";
-        if (!FolderExists(snFolder)) {
-            var fso = new ActiveXObject("Scripting.FileSystemObject");
-            fso.CreateFolder(snFolder);
-        }
+        ensureFolder(peFolder);
+        writeTextFile(peFolder + "\\recovery_script.bat", fillTemplate("tpl-recovery-script", selectedAccount, bootFolder));
+        writeTextFile(peFolder + "\\CopyData.bat", fillTemplate("tpl-copy-data", selectedAccount, bootFolder));
+        writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
+        steps.push("\u2713 Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
 
-        // 2. Création du script recovery_script.bat
-        var batPath = snFolder + "\\recovery_script.bat";
-        var batContent = "@echo off\r\n" +
-            "color 0F\r\n" +
-            "mode con cols=84 lines=34\r\n" +
-            "title SUPER NOVA RECOVERY\r\n" +
-            "cls\r\n" +
-            "echo =========================================\r\n" +
-            "echo          SUPER NOVA RECOVERY\r\n" +
-            "echo =========================================\r\n" +
-            "echo.\r\n" +
-            "echo Compte cible : " + selectedAccount + "\r\n" +
-            "echo.\r\n" +
-            "set /p newpwd=\"Entrez le nouveau mot de passe : \"\r\n" +
-            "echo.\r\n" +
-            "net user \"" + selectedAccount + "\" %newpwd%\r\n" +
-            "if %ERRORLEVEL% EQU 0 goto :SUCCESS\r\n" +
-            "goto :MS_ACCOUNT\r\n" +
-            "\r\n" +
-            ":SUCCESS\r\n" +
-            "echo.\r\n" +
-            "echo [SUCCES] Le mot de passe a ete reinitialise !\r\n" +
-            "echo Finalisation en cours...\r\n" +
-            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "echo L'ordinateur va redemarrer dans 10 secondes pour appliquer les changements.\r\n" +
-            "shutdown /r /t 10\r\n" +
-            "pause\r\n" +
-            "goto :CLEANUP\r\n" +
-            "\r\n" +
-            ":MS_ACCOUNT\r\n" +
-            "echo.\r\n" +
-            "echo =========================================\r\n" +
-            "echo  COMPTE MICROSOFT DETECTE\r\n" +
-            "echo =========================================\r\n" +
-            "echo.\r\n" +
-            "echo Ce compte est lie a Microsoft.\r\n" +
-            "echo Pour changer le mot de passe, rendez-vous sur :\r\n" +
-            "echo    https://account.live.com/password/reset\r\n" +
-            "echo.\r\n" +
-            "echo Cependant, vous pouvez recuperer vos donnees !\r\n" +
-            "echo.\r\n" +
-            "echo 1 - Recuperer mes donnees (creer un compte de secours)\r\n" +
-            "echo 2 - Quitter\r\n" +
-            "echo.\r\n" +
-            "set /p choice=\"Choix : \"\r\n" +
-            "if \"%choice%\"==\"1\" goto :RECOVER\r\n" +
-            "goto :QUIT\r\n" +
-            "\r\n" +
-            ":RECOVER\r\n" +
-            "echo.\r\n" +
-            "echo Creation du compte SuperNovaAdmin...\r\n" +
-            "net user SuperNovaAdmin \"\" /add >nul 2>&1\r\n" +
-            "net localgroup Administrateurs SuperNovaAdmin /add >nul 2>&1\r\n" +
-            "net localgroup Administrators SuperNovaAdmin /add >nul 2>&1\r\n" +
-            "echo [OK] Compte SuperNovaAdmin cree avec succes.\r\n" +
-            "echo.\r\n" +
-            "echo Preparation de l'outil de transfert...\r\n" +
-            "echo @echo off > \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo color 0F >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo mode con cols=84 lines=34 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo title SUPER NOVA - Recuperation de donnees >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo cls >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo fsutil dirty query %%systemdrive%% ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo if %%errorLevel%% NEQ 0 ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo Demande d'autorisation... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     powershell -Command \"Start-Process '%%~f0' -Verb RunAs\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     exit /b >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo ) >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo    SUPER NOVA - Recuperation de donnees >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Copie de vos fichiers en cours... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo mkdir \"C:\\Backup_" + selectedAccount + "\" 2^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Desktop\" \"C:\\Backup_" + selectedAccount + "\\Bureau\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Documents\" \"C:\\Backup_" + selectedAccount + "\\Documents\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Pictures\" \"C:\\Backup_" + selectedAccount + "\\Images\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Downloads\" \"C:\\Backup_" + selectedAccount + "\\Telechargements\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Users\\" + selectedAccount + "\\Videos\" \"C:\\Backup_" + selectedAccount + "\\Videos\" /E /MT:8 /R:1 /W:1 /NP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo  COPIE TERMINEE ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ========================================= >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo if exist \"C:\\Backup_" + selectedAccount + "\\Bureau\" ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo [SUCCES] La sauvegarde a reussi ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo Vos fichiers sont prets pour le transfert final. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo ) else ( >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo [ERREUR] La sauvegarde a echoue ou aucun fichier n'a ete copie. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo Si vous n'avez pas accepte la demande d'autorisation, >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     echo veuillez relancer le programme. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     pause >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo     exit /b >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo ) >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ======================================================== >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Voulez-vous creer un NOUVEAU compte permanent pour utiliser ce PC ? ^(O/N^) >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo set /p createAccount=\"Choix : \" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo if /I \"%%createAccount%%\"==\"O\" goto :CREATE_ACCOUNT >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo if /I \"%%createAccount%%\"==\"N\" goto :KEEP_ADMIN >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo goto :END_SCRIPT >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo :CREATE_ACCOUNT >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo set /p newUser=\"Nom du nouveau compte : \" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo set /p newPass=\"Mot de passe (Notez-le bien !) : \" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo net user \"%%newUser%%\" \"%%newPass%%\" /add ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo net localgroup Administrateurs \"%%newUser%%\" /add ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo net localgroup Administrators \"%%newUser%%\" /add ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo [OK] Le compte %%newUser%% a ete cree avec succes et est Administrateur ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo [OK] Outil de finalisation prepare. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo copy \"C:\\ProgramData\\SuperNova\\NettoyageFinal.bat\" \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ======================================================== >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo FELICITATIONS ! Votre nouveau compte a ete cree. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Le PC va redemarrer dans 15 secondes. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo 1. Connectez-vous avec votre nouveau compte. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo 2. Double-cliquez sur \"NettoyageFinal\" sur le bureau. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo 3. Lancez l'outil de finalisation. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo ======================================================== >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo shutdown /r /t 15 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo timeout /t 14 /nobreak ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo :KEEP_ADMIN >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Vous avez choisi de garder le compte SuperNovaAdmin. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Transfert des donnees vers vos dossiers personnels... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Bureau\" \"%%USERPROFILE%%\\Desktop\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Documents\" \"%%USERPROFILE%%\\Documents\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Images\" \"%%USERPROFILE%%\\Pictures\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Telechargements\" \"%%USERPROFILE%%\\Downloads\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Videos\" \"%%USERPROFILE%%\\Videos\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo rd /s /q \"C:\\Backup_" + selectedAccount + "\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo [OK] Transfert termine avec succes ! >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Veuillez definir un mot de passe OBLIGATOIRE pour securiser le compte. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo :PWD_LOOP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo set \"adminPass=\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo set /p adminPass=\"Mot de passe : \" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo if \"%%adminPass%%\"==\"\" goto :PWD_LOOP >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo net user SuperNovaAdmin \"%%adminPass%%\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo [OK] Mot de passe enregistre. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo echo Le PC va redemarrer dans 15 secondes... >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo shutdown /r /t 15 >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo timeout /t 14 /nobreak ^>nul >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo. >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo :END_SCRIPT >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%public%\\Desktop\\CopyData.bat\"\r\n" +
-            "echo.\r\n" +
-            "echo.\r\n" +
-            "echo =========================================\r\n" +
-            "echo  Preparation de l'outil de finalisation...\r\n" +
-            "echo =========================================\r\n" +
-            "set \"NF=C:\\ProgramData\\SuperNova\\NettoyageFinal.bat\"\r\n" +
-            "mkdir \"C:\\ProgramData\\SuperNova\" 2>nul\r\n" +
-            "echo @echo off > \"%NF%\"\r\n" +
-            "echo color 0F >> \"%NF%\"\r\n" +
-            "echo mode con cols=84 lines=34 >> \"%NF%\"\r\n" +
-            "echo title SUPER NOVA - Nettoyage Final >> \"%NF%\"\r\n" +
-            "echo cls >> \"%NF%\"\r\n" +
-            "echo fsutil dirty query %%systemdrive%% ^>nul >> \"%NF%\"\r\n" +
-            "echo if %%errorLevel%% NEQ 0 ( >> \"%NF%\"\r\n" +
-            "echo     echo Demande d'autorisation... >> \"%NF%\"\r\n" +
-            "echo     powershell -Command \"Start-Process '%%~f0' -Verb RunAs\" >> \"%NF%\"\r\n" +
-            "echo     exit /b >> \"%NF%\"\r\n" +
-            "echo ) >> \"%NF%\"\r\n" +
-            "echo echo ========================================= >> \"%NF%\"\r\n" +
-            "echo echo    SUPER NOVA - Finalisation >> \"%NF%\"\r\n" +
-            "echo echo ========================================= >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Voulez-vous supprimer le compte temporaire SuperNovaAdmin ? (O/N) >> \"%NF%\"\r\n" +
-            "echo set /p clean=\"Choix : \" >> \"%NF%\"\r\n" +
-            "echo if /I \"%%clean%%\"==\"O\" goto :DO_CLEAN >> \"%NF%\"\r\n" +
-            "echo goto :SKIP_CLEAN >> \"%NF%\"\r\n" +
-            "echo :DO_CLEAN >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Transfert des donnees vers votre nouveau compte... >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Bureau\" \"%%USERPROFILE%%\\Desktop\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Documents\" \"%%USERPROFILE%%\\Documents\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Images\" \"%%USERPROFILE%%\\Pictures\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Telechargements\" \"%%USERPROFILE%%\\Downloads\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Videos\" \"%%USERPROFILE%%\\Videos\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo rd /s /q \"C:\\Backup_" + selectedAccount + "\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo echo [OK] Transfert termine avec succes ! >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Suppression du compte SuperNovaAdmin... >> \"%NF%\"\r\n" +
-            "echo net user SuperNovaAdmin /delete ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo rd /s /q \"C:\\Users\\SuperNovaAdmin\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo del \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo [OK] Compte SuperNovaAdmin supprime avec succes ! >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Vos donnees ont ete deplacees dans vos dossiers personnels. >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications. >> \"%NF%\"\r\n" +
-            "echo shutdown /r /t 15 >> \"%NF%\"\r\n" +
-            "echo del \"%%public%%\\Desktop\\CopyData.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo timeout /t 14 /nobreak ^>nul >> \"%NF%\"\r\n" +
-            "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%NF%\"\r\n" +
-            "echo :SKIP_CLEAN >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin. >> \"%NF%\"\r\n" +
-            "echo echo Transfert des donnees vers le compte SuperNovaAdmin... >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Bureau\" \"C:\\Users\\SuperNovaAdmin\\Desktop\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Documents\" \"C:\\Users\\SuperNovaAdmin\\Documents\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Images\" \"C:\\Users\\SuperNovaAdmin\\Pictures\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Telechargements\" \"C:\\Users\\SuperNovaAdmin\\Downloads\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo robocopy \"C:\\Backup_" + selectedAccount + "\\Videos\" \"C:\\Users\\SuperNovaAdmin\\Videos\" /E /MOVE /IS /R:1 /W:1 ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo rd /s /q \"C:\\Backup_" + selectedAccount + "\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo echo [OK] Transfert termine avec succes ! >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo echo Ce compte n'a actuellement pas de mot de passe. >> \"%NF%\"\r\n" +
-            "echo :PWD_LOOP2 >> \"%NF%\"\r\n" +
-            "echo set \"adminPass=\" >> \"%NF%\"\r\n" +
-            "echo set /p adminPass=\"Veuillez definir un mot de passe pour le securiser : \" >> \"%NF%\"\r\n" +
-            "echo if \"%%adminPass%%\"==\"\" goto :PWD_LOOP2 >> \"%NF%\"\r\n" +
-            "echo net user SuperNovaAdmin \"%%adminPass%%\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo echo [OK] Mot de passe enregistre. >> \"%NF%\"\r\n" +
-            "echo echo. >> \"%NF%\"\r\n" +
-            "echo rd /s /q \"C:\\ProgramData\\SuperNova\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo del \"C:\\Users\\Default\\Desktop\\NettoyageFinal.bat\" ^>nul 2^>^&1 >> \"%NF%\"\r\n" +
-            "echo echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications. >> \"%NF%\"\r\n" +
-            "echo shutdown /r /t 15 >> \"%NF%\"\r\n" +
-            "echo timeout /t 14 /nobreak ^>nul >> \"%NF%\"\r\n" +
-            "echo ^(goto^) 2^>nul ^& del \"%%~f0\" >> \"%NF%\"\r\n" +
-            "echo.\r\n" +
-            "echo [OK] Outil de finalisation genere.\r\n" +
-            "echo.\r\n" +
-            "echo [OK] Outil de transfert installe sur le Bureau.\r\n" +
-            "echo.\r\n" +
-            "echo =========================================\r\n" +
-            "echo  PROCHAINES ETAPES :\r\n" +
-            "echo =========================================\r\n" +
-            "echo 1. Le PC va redemarrer automatiquement.\r\n" +
-            "echo 2. Connectez-vous au compte \"SuperNovaAdmin\".\r\n" +
-            "echo 3. Lancez \"CopyData\" sur le Bureau.\r\n" +
-            "echo 4. Vos fichiers seront transferes.\r\n" +
-            "echo.\r\n" +
-            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "echo Redemarrage dans 15 secondes...\r\n" +
-            "shutdown /r /t 15\r\n" +
-            "timeout /t 14 /nobreak >nul\r\n" +
-            "goto :CLEANUP\r\n" +
-            "\r\n" +
-            ":QUIT\r\n" +
-            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "goto :CLEANUP\r\n" +
-            "\r\n" +
-            ":CLEANUP\r\n" +
-            "(goto) 2>nul & del \"%~f0\" & rd /s /q \"" + snFolder + "\"\r\n";
-        var fso2 = new ActiveXObject("Scripting.FileSystemObject");
-        var file = fso2.CreateTextFile(batPath, true);
-        file.Write(batContent);
-        file.Close();
-        steps.push("✓ Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
-
-        // 3. Injection IFEO
-        RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + drive + ":\\Windows\\System32\\config\\SOFTWARE\"");
+        RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
+        var batPath = bootFolder + "\\recovery_script.bat";
         var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /k \\\"" + batPath + "\\\"\" /f";
         var rIFEO = RunCmd(ifeoCmd);
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
 
         if (rIFEO === 0) {
-            steps.push("✓ Options d'ex\u00e9cution (IFEO) configur\u00e9es");
+            steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es");
+            steps.push("\u2713 L'ordinateur est pr\u00eat. Retirez la cl\u00e9 et red\u00e9marrez.");
         } else {
-            steps.push("✗ Impossible d'injecter la cl\u00e9 IFEO (code " + rIFEO + ")");
+            steps.push("\u2717 Impossible d'injecter la cl\u00e9 IFEO (code " + rIFEO + ")");
             success = false;
         }
-
-        if (success) {
-            steps.push("✓ L'ordinateur est pr\u00eat. Retirez la cl\u00e9 et red\u00e9marrez.");
-        }
-        
         renderResult(success, steps);
-    } catch(e) {
-        renderResult(false, ["✗ Erreur JS: " + e.message]);
+    } catch (e) {
+        renderResult(false, ["\u2717 Erreur JS: " + e.message]);
     }
 }
 
 function renderResult(success, steps) {
-    document.getElementById("result-status").innerHTML = '<div class="label">R\u00e9sultat</div>' +
+    byId("result-status").innerHTML = '<div class="label">R\u00e9sultat</div>' +
         (success
-            ? '<span class="found" style="font-size:18px;font-weight:700;">\u2713 Pr\u00eat ! Suivez les \u00e9tapes ci-dessous.</span>'
-            : '<span class="error" style="font-size:15px;">\u2717 Op\u00e9ration \u00e9chou\u00e9e</span><br>' + steps[steps.length-1]);
+            ? '<span class="found result-ok">\u2713 Pr\u00eat ! Suivez les \u00e9tapes ci-dessous.</span>'
+            : '<span class="error result-fail">\u2717 Op\u00e9ration \u00e9chou\u00e9e</span><br>' + steps[steps.length - 1]);
 
     if (success) {
-        document.getElementById("btn-reboot").style.display = "block";
-        document.getElementById("result-steps").innerHTML =
-            '<div class="step-title" style="font-size:15px;margin-bottom:16px;">Prochaines \u00e9tapes</div>' +
-            '<div style="font-size:14px;line-height:2.2;color:#e0e0e0;">' +
+        byId("btn-reboot").className = "btn btn-primary";
+        byId("result-steps").innerHTML =
+            '<div class="step-title step-title-lg">Prochaines \u00e9tapes</div>' +
+            '<div class="next-steps">' +
             '<div>1. \uD83D\uDD0C Retirez la cl\u00e9 USB</div>' +
             '<div>2. \uD83D\uDD04 Red\u00e9marrez le PC</div>' +
-            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong style="color:#5b8def;font-size:16px;">5x sur Maj</strong></div>' +
+            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong class="hl">5x sur Maj</strong></div>' +
             '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran</div>' +
             '</div>';
     } else {
-        document.getElementById("result-steps").innerHTML =
-            '<div class="error" style="font-size:13px;">' + steps.join('<br>') + '</div>';
+        byId("btn-reboot").className = "btn btn-primary hidden";
+        byId("result-steps").innerHTML = '<div class="error">' + steps.join('<br>') + '</div>';
     }
 }
 
 function reboot() {
     var shell = new ActiveXObject("WScript.Shell");
-    // Essaie d'abord shutdown (Windows normal), si échec (WinPE) utilise wpeutil
     shell.Run("cmd.exe /c shutdown /r /t 5 || wpeutil reboot", 0, false);
-    document.getElementById("result-status").innerHTML = '<div class="label">Red\u00e9marrage</div><span class="info">\u21ba Red\u00e9marrage en cours...</span>';
+    byId("result-status").innerHTML = '<div class="label">Red\u00e9marrage</div><span class="info">\u21ba Red\u00e9marrage en cours...</span>';
 }
 </script>
 
