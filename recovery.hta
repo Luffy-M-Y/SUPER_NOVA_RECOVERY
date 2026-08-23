@@ -269,7 +269,7 @@ echo Compte cible : {{ACCOUNT}}
 echo.
 set /p newpwd="Entrez le nouveau mot de passe : "
 echo.
-net user "{{ACCOUNT}}" %newpwd%
+net user "{{ACCOUNT}}" "%newpwd%"
 if %ERRORLEVEL% EQU 0 goto :SUCCESS
 goto :MS_ACCOUNT
 
@@ -304,8 +304,24 @@ goto :QUIT
 
 :RECOVER
 echo.
+echo Avant de creer le compte SuperNovaAdmin,
+echo definissez un mot de passe obligatoire.
+echo Notez-le : il servira a la connexion apres redemarrage.
+:SN_ADMIN_PWD
+set "snAdminPass="
+set /p snAdminPass="Mot de passe SuperNovaAdmin : "
+if "%snAdminPass%"=="" (
+    echo [ERREUR] Le mot de passe ne peut pas etre vide.
+    goto :SN_ADMIN_PWD
+)
+echo.
 echo Creation du compte SuperNovaAdmin...
-net user SuperNovaAdmin "" /add >nul 2>&amp;1
+net user SuperNovaAdmin "%snAdminPass%" /add >nul 2>&amp;1
+if errorlevel 1 (
+    echo [ERREUR] Creation impossible. Choisissez un mot de passe plus complexe.
+    goto :SN_ADMIN_PWD
+)
+set "snAdminPass="
 net localgroup Administrateurs SuperNovaAdmin /add >nul 2>&amp;1
 net localgroup Administrators SuperNovaAdmin /add >nul 2>&amp;1
 echo [OK] Compte SuperNovaAdmin cree avec succes.
@@ -322,7 +338,7 @@ echo =========================================
 echo  PROCHAINES ETAPES :
 echo =========================================
 echo 1. Le PC va redemarrer automatiquement.
-echo 2. Connectez-vous au compte "SuperNovaAdmin".
+echo 2. Connectez-vous au compte "SuperNovaAdmin" avec le mot de passe defini.
 echo 3. Lancez "CopyData" sur le Bureau.
 echo 4. Vos fichiers seront transferes.
 echo.
@@ -387,9 +403,23 @@ goto :END_SCRIPT
 
 :CREATE_ACCOUNT
 echo.
+set "newUser="
+set "newPass="
 set /p newUser="Nom du nouveau compte : "
+if "%newUser%"=="" (
+    echo [ERREUR] Le nom de compte ne peut pas etre vide.
+    goto :CREATE_ACCOUNT
+)
 set /p newPass="Mot de passe (Notez-le bien !) : "
+if "%newPass%"=="" (
+    echo [ERREUR] Le mot de passe ne peut pas etre vide.
+    goto :CREATE_ACCOUNT
+)
 net user "%newUser%" "%newPass%" /add >nul 2>&amp;1
+if errorlevel 1 (
+    echo [ERREUR] Creation impossible. Verifiez le nom et la complexite du mot de passe.
+    goto :CREATE_ACCOUNT
+)
 net localgroup Administrateurs "%newUser%" /add >nul 2>&amp;1
 net localgroup Administrators "%newUser%" /add >nul 2>&amp;1
 echo [OK] Le compte %newUser% a ete cree avec succes et est Administrateur !
@@ -494,10 +524,11 @@ robocopy "C:\Backup_{{ACCOUNT}}\Videos" "C:\Users\SuperNovaAdmin\Videos" /E /MOV
 rd /s /q "C:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
-echo Ce compte n'a actuellement pas de mot de passe.
+echo Le compte SuperNovaAdmin a deja un mot de passe.
+echo Saisissez-le a nouveau, ou choisissez-en un autre.
 :PWD_LOOP2
 set "adminPass="
-set /p adminPass="Veuillez definir un mot de passe pour le securiser : "
+set /p adminPass="Mot de passe SuperNovaAdmin : "
 if "%adminPass%"=="" goto :PWD_LOOP2
 net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
 echo [OK] Mot de passe enregistre.
@@ -598,6 +629,12 @@ function byId(id) {
 function isBuiltinAdmin(name) {
     var n = String(name).toLowerCase();
     return n === "administrateur" || n === "administrator";
+}
+
+function isSafeAccountName(name) {
+    var s = String(name);
+    if (!s || s.length > 64) return false;
+    return !/[&|<>^%!"\\\r\n\/\*\?=,;:\[\]+]/.test(s);
 }
 
 function accountTypeLabel(name) {
@@ -727,6 +764,17 @@ function confirmReset() {
         }
         return;
     }
+    if (!isSafeAccountName(selectedAccount)) {
+        byId("btn-reset").className = "btn btn-danger btn-invalid";
+        if (!byId("no-account-error")) {
+            var err = document.createElement("div");
+            err.id = "no-account-error";
+            err.className = "inline-error";
+            err.textContent = "\u26a0 Nom de compte invalide. Selectionnez un autre compte.";
+            byId("btn-reset").parentNode.insertBefore(err, byId("btn-reset").nextSibling);
+        }
+        return;
+    }
     byId("confirm-account").innerHTML = "&#128100; " + escapeHtml(selectedAccount);
     byId("confirm-type").innerHTML = isBuiltinAdmin(selectedAccount)
         ? "Administrateur int\u00e9gr\u00e9"
@@ -758,6 +806,10 @@ function executeReset() {
     byId("result-steps").innerHTML = "";
     byId("btn-reboot").className = "btn btn-primary hidden";
     try {
+        if (!isSafeAccountName(selectedAccount)) {
+            renderResult(false, ["\u2717 Nom de compte invalide."]);
+            return;
+        }
         var peFolder = windowsDrive + ":\\SuperNova";
         var bootFolder = "C:\\SuperNova";
         var steps = [];

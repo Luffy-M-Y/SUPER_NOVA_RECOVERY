@@ -45,12 +45,35 @@ if errorlevel 1 (
 REM ── Étape 4 : Copier les fichiers SUPER NOVA ──────────────────────────────
 echo [4/7] Injection des fichiers SUPER NOVA...
 Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-HTA.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-HTA.cab
+    goto :EOF
+)
 Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-HTA_fr-fr.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-HTA_fr-fr.cab
+    goto :EOF
+)
 Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-Scripting.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-Scripting.cab
+    goto :EOF
+)
 Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-Scripting_fr-fr.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-Scripting_fr-fr.cab
+    goto :EOF
+)
 mkdir "%MOUNT%\SuperNova"
 copy /Y "%PROJECT%recovery.hta" "%MOUNT%\SuperNova\"
-copy /Y "%PROJECT%recovery.bat" "%MOUNT%\SuperNova\"
+if errorlevel 1 (
+    echo ERREUR : Impossible de copier recovery.hta
+    goto :EOF
+)
+if not exist "%MOUNT%\SuperNova\recovery.hta" (
+    echo ERREUR : recovery.hta absent de l'image.
+    goto :EOF
+)
 if exist "%PROJECT%assets\supernova.ico" (
     copy /Y "%PROJECT%assets\supernova.ico" "%MOUNT%\SuperNova\"
 )
@@ -58,6 +81,16 @@ if exist "%PROJECT%assets\supernova.ico" (
 REM ── Étape 5 : Configurer le démarrage automatique ─────────────────────────
 echo [5/7] Configuration du demarrage automatique...
 copy /Y "%PROJECT%build\winpeshl.ini" "%MOUNT%\Windows\System32\winpeshl.ini"
+if errorlevel 1 (
+    echo ERREUR : Impossible de copier winpeshl.ini
+    goto :EOF
+)
+
+echo        Empreintes SHA256 des fichiers injectes :
+certutil -hashfile "%MOUNT%\SuperNova\recovery.hta" SHA256
+certutil -hashfile "%MOUNT%\Windows\System32\winpeshl.ini" SHA256
+certutil -hashfile "%MOUNT%\SuperNova\recovery.hta" SHA256 > "%WORKSPACE%\SHA256.txt"
+certutil -hashfile "%MOUNT%\Windows\System32\winpeshl.ini" SHA256 >> "%WORKSPACE%\SHA256.txt"
 
 REM ── Étape 6 : Configurer le clavier français ──────────────────────────────
 echo [6/7] Configuration du clavier francais...
@@ -76,6 +109,7 @@ REM ── Étape 8 : Créer le ZIP + ISO ────────────�
 echo.
 echo Creation des livrables...
 if not exist "%OUTPUT%" mkdir "%OUTPUT%"
+if exist "%WORKSPACE%\SHA256.txt" copy /Y "%WORKSPACE%\SHA256.txt" "%OUTPUT%\SHA256.txt" >nul
 
 if exist "%OUTPUT%\SUPER_NOVA_RECOVERY.zip" del "%OUTPUT%\SUPER_NOVA_RECOVERY.zip"
 powershell -Command "Compress-Archive -Path 'C:\WinPE_SuperNova\media\*' -DestinationPath '%OUTPUT%\SUPER_NOVA_RECOVERY.zip'"
