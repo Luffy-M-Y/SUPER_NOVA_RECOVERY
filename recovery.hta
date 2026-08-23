@@ -367,7 +367,8 @@ timeout /t 4 /nobreak >nul
 goto :CLEANUP
 
 :CLEANUP
-(goto) 2>nul &amp; del "%~f0" &amp; rd /s /q "{{SN_FOLDER}}"
+(goto) 2>nul &amp; del "%~f0"
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 </textarea>
 <textarea id="tpl-copy-data">@echo off
 color 0F
