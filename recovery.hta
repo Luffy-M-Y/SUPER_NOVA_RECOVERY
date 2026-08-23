@@ -267,7 +267,13 @@ echo =========================================
 echo.
 echo Compte cible : {{ACCOUNT}}
 echo.
+:ASK_PWD
+set "newpwd="
 set /p newpwd="Entrez le nouveau mot de passe : "
+if "%newpwd%"=="" (
+    echo [ERREUR] Le mot de passe ne peut pas etre vide.
+    goto :ASK_PWD
+)
 echo.
 net user "{{ACCOUNT}}" "%newpwd%"
 if %ERRORLEVEL% EQU 0 goto :SUCCESS

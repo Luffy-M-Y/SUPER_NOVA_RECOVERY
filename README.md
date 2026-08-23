@@ -6,8 +6,8 @@ Environnement WinPE bootable pour réinitialiser un mot de passe de compte local
 
 ```
 SUPER_NOVA_RECOVERY/
-├── recovery.hta          ← Interface graphique (lancée au boot WinPE)
-├── recovery.bat          ← Script de réinitialisation (sethc.exe method)
+├── recovery.hta          ← Interface graphique + flux de réinitialisation (IFEO)
+├── recovery.bat          ← Inerte (ancienne méthode sethc.exe, ne plus utiliser)
 ├── assets/
 │   └── supernova.ico     ← Icône de l'application
 ├── build/
@@ -27,14 +27,14 @@ Espace requis : ~10 Go | Droits administrateur requis
 
 ## Méthode de réinitialisation
 
-**Méthode sethc.exe (Sticky Keys)** :
-1. WinPE démarre → `recovery.hta` se lance automatiquement
-2. L'utilisateur clique "RÉINITIALISER"
-3. `recovery.bat` remplace `sethc.exe` par `cmd.exe` sur la partition Windows
-4. L'utilisateur redémarre → sur l'écran de login, appuie 5x sur Maj
-5. Un CMD s'ouvre avec les droits SYSTEM → `net user administrateur /active:yes`
-6. Connexion avec le compte Admin → changer le mot de passe du compte bloqué
-7. Nettoyage : remettre `sethc.exe` en place + désactiver le compte Admin
+**Méthode IFEO (via `recovery.hta` uniquement)** :
+1. WinPE démarre → `recovery.hta` se lance automatiquement (`winpeshl.ini`)
+2. L'utilisateur choisit un compte et confirme
+3. L'outil écrit les scripts sur la partition Windows et pose un Debugger IFEO sur `sethc.exe`
+4. Après redémarrage, 5× Maj lance le script (SYSTEM) pour réinitialiser le mot de passe
+5. Le script retire la clé IFEO et se supprime s'il va jusqu'au bout
+
+`recovery.bat` n'est **pas** copié dans l'image WinPE. S'il est lancé à la main, il n'effectue **aucune** modification système (plus de remplacement de `sethc.exe` par `cmd.exe`).
 
 ## Limitations connues
 
