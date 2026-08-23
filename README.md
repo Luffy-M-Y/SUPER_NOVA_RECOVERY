@@ -30,9 +30,9 @@ Espace requis : ~10 Go | Droits administrateur requis
 **Méthode IFEO (via `recovery.hta` uniquement)** :
 1. WinPE démarre → `recovery.hta` se lance automatiquement (`winpeshl.ini`)
 2. L'utilisateur choisit un compte et confirme
-3. L'outil écrit les scripts sur la partition Windows et pose un Debugger IFEO sur `sethc.exe`
+3. L'outil écrit les scripts sur la partition Windows et pose un Debugger IFEO sur `sethc.exe` (lanceur one-shot)
 4. Après redémarrage, 5× Maj lance le script (SYSTEM) pour réinitialiser le mot de passe
-5. Le script retire la clé IFEO et se supprime s'il va jusqu'au bout
+5. Le lanceur retire la clé IFEO **dès l'ouverture** (crash / abandon / script manquant inclus). Un `RunOnce` la retire aussi à la prochaine connexion réussie si 5× Maj n'a pas été utilisé. Le script se supprime s'il va jusqu'au bout
 
 `recovery.bat` n'est **pas** copié dans l'image WinPE. S'il est lancé à la main, il n'effectue **aucune** modification système (plus de remplacement de `sethc.exe` par `cmd.exe`).
 

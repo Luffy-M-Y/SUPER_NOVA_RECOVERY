@@ -238,7 +238,9 @@ body {
         </div>
         <div class="warning-box">
             ⚠️ Cette opération va modifier des fichiers système Windows.<br>
-            Assurez-vous d'avoir l'autorisation d'accéder à ce PC.
+            Assurez-vous d'avoir l'autorisation d'accéder à ce PC.<br>
+            Le déclencheur 5× Maj est à usage unique : il est retiré dès le lancement
+            (et à la prochaine connexion si 5× Maj n'est pas utilisé).
         </div>
         <button class="btn btn-danger" onclick="executeReset()">
             ✓ Confirmer la réinitialisation
@@ -257,6 +259,7 @@ body {
 
 <div id="payload-templates" class="hidden">
 <textarea id="tpl-recovery-script">@echo off
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
 color 0F
 mode con cols=84 lines=34
 title SUPER NOVA RECOVERY
@@ -825,16 +828,33 @@ function executeReset() {
         writeTextFile(peFolder + "\\recovery_script.bat", fillTemplate("tpl-recovery-script", selectedAccount, bootFolder));
         writeTextFile(peFolder + "\\CopyData.bat", fillTemplate("tpl-copy-data", selectedAccount, bootFolder));
         writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
+        writeTextFile(peFolder + "\\ifeo_launch.bat",
+            "@echo off\r\n" +
+            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
+            "call \"%~dp0recovery_script.bat\"\r\n" +
+            "goto :EOF\r\n" +
+            ":MISSING\r\n" +
+            "echo Script de recuperation introuvable.\r\n" +
+            "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
+            "pause\r\n");
         steps.push("\u2713 Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
 
         RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
-        var batPath = bootFolder + "\\recovery_script.bat";
-        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /k \\\"" + batPath + "\\\"\" /f";
+        var launchPath = bootFolder + "\\ifeo_launch.bat";
+        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /k \\\"" + launchPath + "\\\"\" /f";
+        var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
         var rIFEO = RunCmd(ifeoCmd);
+        var rOnce = RunCmd(runOnceCmd);
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
 
         if (rIFEO === 0) {
-            steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es");
+            steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es (usage unique)");
+            if (rOnce === 0) {
+                steps.push("\u2713 Filet IFEO : nettoyage \u00e0 la prochaine connexion");
+            } else {
+                steps.push("\u26a0 Filet RunOnce non pos\u00e9 (code " + rOnce + ") \u2014 le d\u00e9clencheur reste \u00e0 usage unique");
+            }
             steps.push("\u2713 L'ordinateur est pr\u00eat. Retirez la cl\u00e9 et red\u00e9marrez.");
         } else {
             steps.push("\u2717 Impossible d'injecter la cl\u00e9 IFEO (code " + rIFEO + ")");
@@ -859,8 +879,8 @@ function renderResult(success, steps) {
             '<div class="next-steps">' +
             '<div>1. \uD83D\uDD0C Retirez la cl\u00e9 USB</div>' +
             '<div>2. \uD83D\uDD04 Red\u00e9marrez le PC</div>' +
-            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong class="hl">5x sur Maj</strong></div>' +
-            '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran</div>' +
+            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong class="hl">5x sur Maj</strong> (une seule fois)</div>' +
+            '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran \u2014 le d\u00e9clencheur SYSTEM est retir\u00e9 d\u00e8s l\'ouverture</div>' +
             '</div>';
     } else {
         byId("btn-reboot").className = "btn btn-primary hidden";
