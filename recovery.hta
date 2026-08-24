@@ -452,7 +452,8 @@ echo 3. Lancez l'outil de finalisation.
 echo ========================================================
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 
 :KEEP_ADMIN
 echo.
@@ -466,21 +467,16 @@ robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /M
 rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
-echo Veuillez definir un mot de passe OBLIGATOIRE pour securiser le compte.
-:PWD_LOOP
-set "adminPass="
-set /p adminPass="Mot de passe : "
-if "%adminPass%"=="" goto :PWD_LOOP
-net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
-echo [OK] Mot de passe enregistre.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 echo Le PC va redemarrer dans 15 secondes...
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 
 :END_SCRIPT
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 </textarea>
 <textarea id="tpl-nettoyage">@echo off
 color 0F
@@ -526,7 +522,8 @@ echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 del "%public%\Desktop\CopyData.bat" >nul 2>&amp;1
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 :SKIP_CLEAN
 echo.
 echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin.
@@ -553,7 +550,8 @@ del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
 echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 </textarea>
 </div>
 
