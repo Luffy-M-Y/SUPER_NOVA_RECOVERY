@@ -378,7 +378,7 @@ cls
 fsutil dirty query %systemdrive% >nul
 if %errorLevel% NEQ 0 (
     echo Demande d'autorisation...
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    powershell -Command "Start-Process -FilePath cmd.exe -ArgumentList @('/k', '\"%~f0\"') -Verb RunAs"
     exit /b
 )
 echo =========================================
@@ -452,7 +452,8 @@ echo 3. Lancez l'outil de finalisation.
 echo ========================================================
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+pause
 exit
 
 :KEEP_ADMIN
@@ -471,11 +472,13 @@ rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 echo Le PC va redemarrer dans 15 secondes...
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+set "_self=%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%_self%\"" /f >nul 2>&amp;1
+pause
 exit
 
 :END_SCRIPT
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
 </textarea>
 <textarea id="tpl-nettoyage">@echo off
@@ -522,7 +525,7 @@ echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 del "%public%\Desktop\CopyData.bat" >nul 2>&amp;1
 timeout /t 14 /nobreak >nul
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
 :SKIP_CLEAN
 echo.
@@ -550,7 +553,7 @@ del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
 echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
 </textarea>
 </div>
