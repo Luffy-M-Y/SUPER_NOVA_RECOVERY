@@ -6,6 +6,7 @@
 <HTA:APPLICATION
     ID="SuperNovaRecovery"
     APPLICATIONNAME="SuperNovaRecovery"
+    ICON="SUPER_NOVA.ico"
     BORDER="thin"
     BORDERSTYLE="normal"
     CAPTION="yes"
@@ -849,6 +850,20 @@ function executeReset() {
             "pause\r\n");
         steps.push("\u2713 Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
 
+        var aclCmd = "icacls \"" + peFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX";
+        var rAcl = RunCmd(aclCmd);
+        if (rAcl !== 0) {
+            renderResult(false, ["\u2717 Impossible de prot\u00e9ger le dossier des scripts (code " + rAcl + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9."]);
+            return;
+        }
+        var rAclVerify = RunCmd("icacls \"" + peFolder + "\" /verify");
+        if (rAclVerify !== 0) {
+            renderResult(false, ["\u2717 Les permissions du dossier sont invalides (code " + rAclVerify + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9."]);
+            return;
+        }
+        steps.push("\u2713 Dossier des scripts verrouill\u00e9 (lecture seule pour les utilisateurs standard)");
+        steps.push("\u2713 Permissions du dossier v\u00e9rifi\u00e9es");
+
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
         RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
         var launchPath = bootFolder + "\\ifeo_launch.bat";
@@ -879,7 +894,7 @@ function executeReset() {
 function renderResult(success, steps) {
     byId("result-status").innerHTML = '<div class="label">R\u00e9sultat</div>' +
         (success
-            ? '<span class="found result-ok">\u2713 Pr\u00eat ! Suivez les \u00e9tapes ci-dessous.</span>'
+            ? '<span class="found result-ok">\u2713 Pr\u00eat ! Suivez les \u00e9tapes ci-dessous.</span><br><span class="info">\u2713 Permissions du dossier v\u00e9rifi\u00e9es</span>'
             : '<span class="error result-fail">\u2717 Op\u00e9ration \u00e9chou\u00e9e</span><br>' + steps[steps.length - 1]);
 
     if (success) {

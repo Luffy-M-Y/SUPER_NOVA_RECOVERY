@@ -74,8 +74,8 @@ if not exist "%MOUNT%\SuperNova\recovery.hta" (
     echo ERREUR : recovery.hta absent de l'image.
     goto :EOF
 )
-if exist "%PROJECT%assets\supernova.ico" (
-    copy /Y "%PROJECT%assets\supernova.ico" "%MOUNT%\SuperNova\"
+if exist "%PROJECT%assets\SUPER_NOVA.ico" (
+    copy /Y "%PROJECT%assets\SUPER_NOVA.ico" "%MOUNT%\SuperNova\"
 )
 
 REM ── Étape 5 : Configurer le démarrage automatique ─────────────────────────
