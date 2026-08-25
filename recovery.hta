@@ -218,6 +218,19 @@ body {
         </button>
     </div>
 
+    <div id="screen-windows" class="screen">
+        <div class="section-title">Installations Windows détectées</div>
+        <div id="windows-list"></div>
+        <div id="windows-error" class="inline-error hidden"></div>
+        <div class="warning-box">
+            ⚠️ Plusieurs installations Windows ont été trouvées. Sélectionnez celle à analyser.
+        </div>
+        <button class="btn btn-primary" id="btn-windows" onclick="confirmWindowsDrive()" disabled>
+            Continuer avec cette partition
+        </button>
+        <button class="btn btn-ghost" onclick="returnToDetection()">← Retour</button>
+    </div>
+
     <div id="screen-accounts" class="screen">
         <div class="section-title">Comptes détectés sur <span id="drive-label"></span></div>
         <div id="accounts-list"></div>
@@ -228,7 +241,7 @@ body {
         <button class="btn btn-danger" id="btn-reset" onclick="confirmReset()" disabled>
             🔑 Réinitialiser le mot de passe
         </button>
-        <button class="btn btn-ghost" onclick="showScreen('screen-detect')">← Retour</button>
+        <button class="btn btn-ghost" onclick="returnFromAccounts()">← Retour</button>
     </div>
 
     <div id="screen-confirm" class="screen">
@@ -326,9 +339,11 @@ if "%snAdminPass%"=="" (
 )
 echo.
 echo Creation du compte SuperNovaAdmin...
+net user SuperNovaAdmin >nul 2>&amp;1
+if not errorlevel 1 goto :SN_ADMIN_EXISTS
 net user SuperNovaAdmin "%snAdminPass%" /add >nul 2>&amp;1
 if errorlevel 1 (
-    echo [ERREUR] Creation impossible. Choisissez un mot de passe plus complexe.
+    echo [ERREUR] Creation impossible. Le mot de passe ne respecte peut-etre pas la politique Windows.
     goto :SN_ADMIN_PWD
 )
 set "snAdminPass="
@@ -357,6 +372,14 @@ echo Redemarrage dans 15 secondes...
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
 goto :CLEANUP
+
+:SN_ADMIN_EXISTS
+echo.
+echo [ERREUR] Le compte SuperNovaAdmin existe deja.
+echo Aucun mot de passe n'a ete modifie pour proteger ce compte existant.
+echo Utilisez ce compte s'il est deja connu, ou supprimez-le avant de relancer cette operation.
+pause
+goto :QUIT
 
 :QUIT
 echo.
@@ -579,16 +602,19 @@ Function FileExists(path)
     FileExists = fso.FileExists(path)
 End Function
 
-Function FindWindowsDrive()
-    Dim drives, d
-    drives = Array("C", "D", "E", "F", "G", "H", "I")
-    For Each d In drives
-        If FileExists(d & ":\Windows\System32\config\SAM") Then
-            FindWindowsDrive = d
-            Exit Function
+Function FindWindowsDrives()
+    Dim d, code, candidates, shell, peDrive
+    candidates = ""
+    Set shell = CreateObject("WScript.Shell")
+    peDrive = UCase(Left(shell.ExpandEnvironmentStrings("%SystemDrive%"), 1))
+    For code = Asc("C") To Asc("Z")
+        d = Chr(code)
+        If d <> peDrive And FileExists(d & ":\Windows\System32\config\SAM") Then
+            If candidates <> "" Then candidates = candidates & "|"
+            candidates = candidates & d
         End If
     Next
-    FindWindowsDrive = ""
+    FindWindowsDrives = candidates
 End Function
 
 Function GetAccounts(winDrive)
@@ -637,8 +663,10 @@ window.onerror = function(msg, url, line) {
 
 var selectedAccount = "";
 var windowsDrive = "";
+var selectedWindowsDrive = "";
+var detectedWindowsDrives = [];
 var accounts = [];
-var screenIds = ["screen-detect", "screen-accounts", "screen-confirm", "screen-result"];
+var screenIds = ["screen-detect", "screen-windows", "screen-accounts", "screen-confirm", "screen-result"];
 
 function byId(id) {
     return document.getElementById(id);
@@ -647,6 +675,13 @@ function byId(id) {
 function isBuiltinAdmin(name) {
     var n = String(name).toLowerCase();
     return n === "administrateur" || n === "administrator";
+}
+
+function isSystemAccount(name) {
+    var n = String(name).toLowerCase();
+    return n === "administrateur" || n === "administrator" ||
+        n === "invit\u00e9" || n === "invite" || n === "guest" ||
+        n === "defaultaccount" || n === "wdagutilityaccount" || n === "wsiaccount";
 }
 
 function isSafeAccountName(name) {
@@ -705,13 +740,88 @@ window.onload = function() {
 function detectWindows() {
     setDetectStatus('<span class="spinner"></span> Recherche en cours...');
     try {
-        var drive = FindWindowsDrive();
-        if (drive === "") {
+        var rawDrives = FindWindowsDrives();
+        if (rawDrives === "") {
             setDetectStatus('<span class="error">\u2717 Partition Windows introuvable.</span>');
             return;
         }
-        windowsDrive = drive;
+        var drives = rawDrives.split("|");
+        detectedWindowsDrives = drives;
+        if (drives.length === 1) {
+            openWindowsDrive(drives[0]);
+            return;
+        }
+        renderWindowsDrives(drives);
+        showScreen("screen-windows");
+    } catch (e) {
+        setDetectStatus('<span class="error">\u2717 Erreur : ' + e.message + '</span>');
+    }
+}
+
+function renderWindowsDrives(drives) {
+    var list = byId("windows-list");
+    list.innerHTML = "";
+    selectedWindowsDrive = "";
+    byId("btn-windows").disabled = true;
+    for (var i = 0; i < drives.length; i++) {
+        var drive = drives[i];
+        var div = document.createElement("div");
+        div.className = "account-item";
+        div.setAttribute("data-drive", drive);
+        div.innerHTML = '<div class="acc-name">\ud83d\uddb4\ufe0f Windows sur ' + escapeHtml(drive) + ':\\</div>' +
+            '<div class="acc-type">Partition contenant les fichiers syst\u00e8me Windows</div>';
+        div.onclick = function() { selectWindowsDrive(this); };
+        list.appendChild(div);
+    }
+}
+
+function selectWindowsDrive(el) {
+    var choices = byId("windows-list").children;
+    for (var i = 0; i < choices.length; i++) {
+        choices[i].className = "account-item";
+    }
+    el.className = "account-item selected";
+    selectedWindowsDrive = el.getAttribute("data-drive");
+    byId("btn-windows").disabled = false;
+    clearWindowsError();
+}
+
+function confirmWindowsDrive() {
+    if (selectedWindowsDrive !== "") openWindowsDrive(selectedWindowsDrive);
+}
+
+function clearWindowsError() {
+    var error = byId("windows-error");
+    error.className = "inline-error hidden";
+    error.innerHTML = "";
+}
+
+function showWindowsError(message) {
+    var error = byId("windows-error");
+    error.className = "inline-error";
+    error.textContent = message;
+}
+
+function returnToDetection() {
+    selectedWindowsDrive = "";
+    showScreen("screen-detect");
+    setDetectStatus('<span class="info">Choisissez « Analyser les disques » pour relancer la recherche.</span>');
+}
+
+function returnFromAccounts() {
+    if (detectedWindowsDrives.length > 1) {
+        renderWindowsDrives(detectedWindowsDrives);
+        showScreen("screen-windows");
+        return;
+    }
+    returnToDetection();
+}
+
+function openWindowsDrive(drive) {
+    windowsDrive = drive;
+    try {
         if (IsBitLockerActive(drive)) {
+            showScreen("screen-detect");
             setDetectStatus('<span class="warn">\u26a0 BitLocker d\u00e9tect\u00e9 sur ' + drive + ':\\</span>');
             return;
         }
@@ -729,11 +839,17 @@ function loadAccounts(drive) {
         if (rawString !== "") {
             var splitted = rawString.split("|");
             for (var i = 0; i < splitted.length; i++) {
-                if (splitted[i] !== "") accounts.push(splitted[i]);
+                if (splitted[i] !== "" && !isSystemAccount(splitted[i])) accounts.push(splitted[i]);
             }
         }
         if (accounts.length === 0) {
-            setDetectStatus('<span class="error">\u2717 Aucun compte trouv\u00e9.</span>');
+            if (detectedWindowsDrives.length > 1) {
+                showWindowsError("Aucun compte local personnel trouv\u00e9 sur " + drive + ":\\. S\u00e9lectionnez une autre installation Windows.");
+                showScreen("screen-windows");
+            } else {
+                showScreen("screen-detect");
+                setDetectStatus('<span class="warn">\u26a0 Aucun compte local personnel trouv\u00e9 sur ' + drive + ':\\</span>');
+            }
             return;
         }
         byId("drive-label").textContent = drive + ":\\Windows";
