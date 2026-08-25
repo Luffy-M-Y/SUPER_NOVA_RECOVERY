@@ -238,7 +238,9 @@ body {
         </div>
         <div class="warning-box">
             ⚠️ Cette opération va modifier des fichiers système Windows.<br>
-            Assurez-vous d'avoir l'autorisation d'accéder à ce PC.
+            Assurez-vous d'avoir l'autorisation d'accéder à ce PC.<br>
+            Le déclencheur 5× Maj est à usage unique : il est retiré dès le lancement
+            (et à la prochaine connexion si 5× Maj n'est pas utilisé).
         </div>
         <button class="btn btn-danger" onclick="executeReset()">
             ✓ Confirmer la réinitialisation
@@ -257,6 +259,7 @@ body {
 
 <div id="payload-templates" class="hidden">
 <textarea id="tpl-recovery-script">@echo off
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
 color 0F
 mode con cols=84 lines=34
 title SUPER NOVA RECOVERY
@@ -267,9 +270,15 @@ echo =========================================
 echo.
 echo Compte cible : {{ACCOUNT}}
 echo.
+:ASK_PWD
+set "newpwd="
 set /p newpwd="Entrez le nouveau mot de passe : "
+if "%newpwd%"=="" (
+    echo [ERREUR] Le mot de passe ne peut pas etre vide.
+    goto :ASK_PWD
+)
 echo.
-net user "{{ACCOUNT}}" %newpwd%
+net user "{{ACCOUNT}}" "%newpwd%"
 if %ERRORLEVEL% EQU 0 goto :SUCCESS
 goto :MS_ACCOUNT
 
@@ -304,16 +313,32 @@ goto :QUIT
 
 :RECOVER
 echo.
+echo Avant de creer le compte SuperNovaAdmin,
+echo definissez un mot de passe obligatoire.
+echo Notez-le : il servira a la connexion apres redemarrage.
+:SN_ADMIN_PWD
+set "snAdminPass="
+set /p snAdminPass="Mot de passe SuperNovaAdmin : "
+if "%snAdminPass%"=="" (
+    echo [ERREUR] Le mot de passe ne peut pas etre vide.
+    goto :SN_ADMIN_PWD
+)
+echo.
 echo Creation du compte SuperNovaAdmin...
-net user SuperNovaAdmin "" /add >nul 2>&amp;1
+net user SuperNovaAdmin "%snAdminPass%" /add >nul 2>&amp;1
+if errorlevel 1 (
+    echo [ERREUR] Creation impossible. Choisissez un mot de passe plus complexe.
+    goto :SN_ADMIN_PWD
+)
+set "snAdminPass="
 net localgroup Administrateurs SuperNovaAdmin /add >nul 2>&amp;1
 net localgroup Administrators SuperNovaAdmin /add >nul 2>&amp;1
 echo [OK] Compte SuperNovaAdmin cree avec succes.
 echo.
 echo Preparation de l'outil de transfert...
-mkdir "C:\ProgramData\SuperNova" 2>nul
+mkdir "{{WIN_DRIVE}}:\ProgramData\SuperNova" 2>nul
 copy /Y "{{SN_FOLDER}}\CopyData.bat" "%public%\Desktop\CopyData.bat" >nul
-copy /Y "{{SN_FOLDER}}\NettoyageFinal.bat" "C:\ProgramData\SuperNova\NettoyageFinal.bat" >nul
+copy /Y "{{SN_FOLDER}}\NettoyageFinal.bat" "{{WIN_DRIVE}}:\ProgramData\SuperNova\NettoyageFinal.bat" >nul
 echo [OK] Outil de finalisation genere.
 echo.
 echo [OK] Outil de transfert installe sur le Bureau.
@@ -322,7 +347,7 @@ echo =========================================
 echo  PROCHAINES ETAPES :
 echo =========================================
 echo 1. Le PC va redemarrer automatiquement.
-echo 2. Connectez-vous au compte "SuperNovaAdmin".
+echo 2. Connectez-vous au compte "SuperNovaAdmin" avec le mot de passe defini.
 echo 3. Lancez "CopyData" sur le Bureau.
 echo 4. Vos fichiers seront transferes.
 echo.
@@ -333,11 +358,17 @@ timeout /t 14 /nobreak >nul
 goto :CLEANUP
 
 :QUIT
+echo.
+echo Vous avez choisi de quitter.
+echo L'ordinateur va redemarrer dans 10 secondes...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+shutdown /r /t 10
+timeout /t 4 /nobreak >nul
 goto :CLEANUP
 
 :CLEANUP
-(goto) 2>nul &amp; del "%~f0" &amp; rd /s /q "{{SN_FOLDER}}"
+(goto) 2>nul &amp; del "%~f0"
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 </textarea>
 <textarea id="tpl-copy-data">@echo off
 color 0F
@@ -347,7 +378,7 @@ cls
 fsutil dirty query %systemdrive% >nul
 if %errorLevel% NEQ 0 (
     echo Demande d'autorisation...
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    powershell -Command "Start-Process -FilePath cmd.exe -ArgumentList @('/k', '\"%~f0\"') -Verb RunAs"
     exit /b
 )
 echo =========================================
@@ -356,18 +387,18 @@ echo =========================================
 echo.
 echo Copie de vos fichiers en cours...
 echo.
-mkdir "C:\Backup_{{ACCOUNT}}" 2>nul
-robocopy "C:\Users\{{ACCOUNT}}\Desktop" "C:\Backup_{{ACCOUNT}}\Bureau" /E /MT:8 /R:1 /W:1 /NP
-robocopy "C:\Users\{{ACCOUNT}}\Documents" "C:\Backup_{{ACCOUNT}}\Documents" /E /MT:8 /R:1 /W:1 /NP
-robocopy "C:\Users\{{ACCOUNT}}\Pictures" "C:\Backup_{{ACCOUNT}}\Images" /E /MT:8 /R:1 /W:1 /NP
-robocopy "C:\Users\{{ACCOUNT}}\Downloads" "C:\Backup_{{ACCOUNT}}\Telechargements" /E /MT:8 /R:1 /W:1 /NP
-robocopy "C:\Users\{{ACCOUNT}}\Videos" "C:\Backup_{{ACCOUNT}}\Videos" /E /MT:8 /R:1 /W:1 /NP
+mkdir "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" 2>nul
+robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Desktop" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" /E /MT:8 /R:1 /W:1 /NP
+robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Documents" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" /E /MT:8 /R:1 /W:1 /NP
+robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Pictures" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" /E /MT:8 /R:1 /W:1 /NP
+robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Downloads" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" /E /MT:8 /R:1 /W:1 /NP
+robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Videos" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" /E /MT:8 /R:1 /W:1 /NP
 echo.
 echo =========================================
 echo  COPIE TERMINEE !
 echo =========================================
 echo.
-if exist "C:\Backup_{{ACCOUNT}}\Bureau" (
+if exist "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" (
     echo [SUCCES] La sauvegarde a reussi !
     echo Vos fichiers sont prets pour le transfert final.
 ) else (
@@ -387,15 +418,29 @@ goto :END_SCRIPT
 
 :CREATE_ACCOUNT
 echo.
+set "newUser="
+set "newPass="
 set /p newUser="Nom du nouveau compte : "
+if "%newUser%"=="" (
+    echo [ERREUR] Le nom de compte ne peut pas etre vide.
+    goto :CREATE_ACCOUNT
+)
 set /p newPass="Mot de passe (Notez-le bien !) : "
+if "%newPass%"=="" (
+    echo [ERREUR] Le mot de passe ne peut pas etre vide.
+    goto :CREATE_ACCOUNT
+)
 net user "%newUser%" "%newPass%" /add >nul 2>&amp;1
+if errorlevel 1 (
+    echo [ERREUR] Creation impossible. Verifiez le nom et la complexite du mot de passe.
+    goto :CREATE_ACCOUNT
+)
 net localgroup Administrateurs "%newUser%" /add >nul 2>&amp;1
 net localgroup Administrators "%newUser%" /add >nul 2>&amp;1
 echo [OK] Le compte %newUser% a ete cree avec succes et est Administrateur !
 echo.
 echo [OK] Outil de finalisation prepare.
-copy "C:\ProgramData\SuperNova\NettoyageFinal.bat" "C:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+copy "{{WIN_DRIVE}}:\ProgramData\SuperNova\NettoyageFinal.bat" "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
 echo.
 echo ========================================================
 echo FELICITATIONS ! Votre nouveau compte a ete cree.
@@ -407,35 +452,34 @@ echo 3. Lancez l'outil de finalisation.
 echo ========================================================
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+pause
+exit
 
 :KEEP_ADMIN
 echo.
 echo Vous avez choisi de garder le compte SuperNovaAdmin.
 echo Transfert des donnees vers vos dossiers personnels...
-robocopy "C:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-rd /s /q "C:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
-echo Veuillez definir un mot de passe OBLIGATOIRE pour securiser le compte.
-:PWD_LOOP
-set "adminPass="
-set /p adminPass="Mot de passe : "
-if "%adminPass%"=="" goto :PWD_LOOP
-net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
-echo [OK] Mot de passe enregistre.
-rd /s /q "C:\ProgramData\SuperNova" >nul 2>&amp;1
+rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 echo Le PC va redemarrer dans 15 secondes...
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+set "_self=%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%_self%\"" /f >nul 2>&amp;1
+pause
+exit
 
 :END_SCRIPT
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 </textarea>
 <textarea id="tpl-nettoyage">@echo off
 color 0F
@@ -459,19 +503,19 @@ goto :SKIP_CLEAN
 :DO_CLEAN
 echo.
 echo Transfert des donnees vers votre nouveau compte...
-robocopy "C:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-rd /s /q "C:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
 echo Suppression du compte SuperNovaAdmin...
 net user SuperNovaAdmin /delete >nul 2>&amp;1
-rd /s /q "C:\Users\SuperNovaAdmin" >nul 2>&amp;1
-rd /s /q "C:\ProgramData\SuperNova" >nul 2>&amp;1
-del "C:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+rd /s /q "{{WIN_DRIVE}}:\Users\SuperNovaAdmin" >nul 2>&amp;1
+rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
+del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
 echo.
 echo [OK] Compte SuperNovaAdmin supprime avec succes !
 echo.
@@ -481,33 +525,36 @@ echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 del "%public%\Desktop\CopyData.bat" >nul 2>&amp;1
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 :SKIP_CLEAN
 echo.
 echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin.
 echo Transfert des donnees vers le compte SuperNovaAdmin...
-robocopy "C:\Backup_{{ACCOUNT}}\Bureau" "C:\Users\SuperNovaAdmin\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Documents" "C:\Users\SuperNovaAdmin\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Images" "C:\Users\SuperNovaAdmin\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Telechargements" "C:\Users\SuperNovaAdmin\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-robocopy "C:\Backup_{{ACCOUNT}}\Videos" "C:\Users\SuperNovaAdmin\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
-rd /s /q "C:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
-echo Ce compte n'a actuellement pas de mot de passe.
+echo Le compte SuperNovaAdmin a deja un mot de passe.
+echo Saisissez-le a nouveau, ou choisissez-en un autre.
 :PWD_LOOP2
 set "adminPass="
-set /p adminPass="Veuillez definir un mot de passe pour le securiser : "
+set /p adminPass="Mot de passe SuperNovaAdmin : "
 if "%adminPass%"=="" goto :PWD_LOOP2
 net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
 echo [OK] Mot de passe enregistre.
 echo.
-rd /s /q "C:\ProgramData\SuperNova" >nul 2>&amp;1
-del "C:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
+del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
 echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-(goto) 2>nul &amp; del "%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
 </textarea>
 </div>
 
@@ -545,6 +592,7 @@ End Function
 
 Function GetAccounts(winDrive)
     Dim output, lines, i, acc
+    RunCmd "reg unload HKLM\OFFLINE_SAM"
     RunCmd "reg load HKLM\OFFLINE_SAM """ & winDrive & ":\Windows\System32\config\SAM"""
     output = RunCmdOutput("reg query ""HKLM\OFFLINE_SAM\SAM\Domains\Account\Users\Names""")
     lines = Split(output, vbCrLf)
@@ -582,7 +630,7 @@ End Function
 
 <script language="JavaScript">
 window.onerror = function(msg, url, line) {
-    alert("ERREUR CRITIQUE : " + msg + "\nLigne : " + line);
+    setDetectStatus('<span class="error">✗ ERREUR CRITIQUE : ' + msg + ' (ligne ' + line + ')</span>');
     return true;
 };
 
@@ -598,6 +646,12 @@ function byId(id) {
 function isBuiltinAdmin(name) {
     var n = String(name).toLowerCase();
     return n === "administrateur" || n === "administrator";
+}
+
+function isSafeAccountName(name) {
+    var s = String(name);
+    if (!s || s.length > 64) return false;
+    return /^[a-zA-Z0-9 _\-\.àâäéèêëîïôùûüçÀÂÄÉÈÊËÎÏÔÙÛÜÇ]{1,64}$/.test(s);
 }
 
 function accountTypeLabel(name) {
@@ -727,6 +781,17 @@ function confirmReset() {
         }
         return;
     }
+    if (!isSafeAccountName(selectedAccount)) {
+        byId("btn-reset").className = "btn btn-danger btn-invalid";
+        if (!byId("no-account-error")) {
+            var err = document.createElement("div");
+            err.id = "no-account-error";
+            err.className = "inline-error";
+            err.textContent = "\u26a0 Nom de compte invalide. Selectionnez un autre compte.";
+            byId("btn-reset").parentNode.insertBefore(err, byId("btn-reset").nextSibling);
+        }
+        return;
+    }
     byId("confirm-account").innerHTML = "&#128100; " + escapeHtml(selectedAccount);
     byId("confirm-type").innerHTML = isBuiltinAdmin(selectedAccount)
         ? "Administrateur int\u00e9gr\u00e9"
@@ -737,7 +802,8 @@ function confirmReset() {
 function fillTemplate(id, account, snFolder) {
     return byId(id).value
         .replace(/\{\{ACCOUNT\}\}/g, account)
-        .replace(/\{\{SN_FOLDER\}\}/g, snFolder);
+        .replace(/\{\{SN_FOLDER\}\}/g, snFolder)
+        .replace(/\{\{WIN_DRIVE\}\}/g, windowsDrive);
 }
 
 function ensureFolder(path) {
@@ -758,8 +824,12 @@ function executeReset() {
     byId("result-steps").innerHTML = "";
     byId("btn-reboot").className = "btn btn-primary hidden";
     try {
+        if (!isSafeAccountName(selectedAccount)) {
+            renderResult(false, ["\u2717 Nom de compte invalide."]);
+            return;
+        }
         var peFolder = windowsDrive + ":\\SuperNova";
-        var bootFolder = "C:\\SuperNova";
+        var bootFolder = windowsDrive + ":\\SuperNova";
         var steps = [];
         var success = true;
 
@@ -767,16 +837,34 @@ function executeReset() {
         writeTextFile(peFolder + "\\recovery_script.bat", fillTemplate("tpl-recovery-script", selectedAccount, bootFolder));
         writeTextFile(peFolder + "\\CopyData.bat", fillTemplate("tpl-copy-data", selectedAccount, bootFolder));
         writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
+        writeTextFile(peFolder + "\\ifeo_launch.bat",
+            "@echo off\r\n" +
+            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
+            "start \"SUPER NOVA RECOVERY\" cmd.exe /k \"%~dp0recovery_script.bat\"\r\n" +
+            "exit\r\n" +
+            ":MISSING\r\n" +
+            "echo Script de recuperation introuvable.\r\n" +
+            "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
+            "pause\r\n");
         steps.push("\u2713 Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
 
+        RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
         RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
-        var batPath = bootFolder + "\\recovery_script.bat";
-        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /k \\\"" + batPath + "\\\"\" /f";
+        var launchPath = bootFolder + "\\ifeo_launch.bat";
+        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /k \\\"" + launchPath + "\\\"\" /f";
+        var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
         var rIFEO = RunCmd(ifeoCmd);
+        var rOnce = RunCmd(runOnceCmd);
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
 
         if (rIFEO === 0) {
-            steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es");
+            steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es (usage unique)");
+            if (rOnce === 0) {
+                steps.push("\u2713 Filet IFEO : nettoyage \u00e0 la prochaine connexion");
+            } else {
+                steps.push("\u26a0 Filet RunOnce non pos\u00e9 (code " + rOnce + ") \u2014 le d\u00e9clencheur reste \u00e0 usage unique");
+            }
             steps.push("\u2713 L'ordinateur est pr\u00eat. Retirez la cl\u00e9 et red\u00e9marrez.");
         } else {
             steps.push("\u2717 Impossible d'injecter la cl\u00e9 IFEO (code " + rIFEO + ")");
@@ -801,8 +889,8 @@ function renderResult(success, steps) {
             '<div class="next-steps">' +
             '<div>1. \uD83D\uDD0C Retirez la cl\u00e9 USB</div>' +
             '<div>2. \uD83D\uDD04 Red\u00e9marrez le PC</div>' +
-            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong class="hl">5x sur Maj</strong></div>' +
-            '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran</div>' +
+            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong class="hl">5x sur Maj</strong> (une seule fois)</div>' +
+            '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran \u2014 le d\u00e9clencheur SYSTEM est retir\u00e9 d\u00e8s l\'ouverture</div>' +
             '</div>';
     } else {
         byId("btn-reboot").className = "btn btn-primary hidden";
