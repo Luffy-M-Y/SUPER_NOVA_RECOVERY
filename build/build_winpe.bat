@@ -119,9 +119,16 @@ if errorlevel 1 (
 )
 
 if exist "%OUTPUT%\SUPER_NOVA_RECOVERY.iso" del "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
-MakeWinPEMedia /ISO "%WORKSPACE%" "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
+call MakeWinPEMedia /ISO "%WORKSPACE%" "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
 if errorlevel 1 (
     echo ERREUR : Impossible de creer l'ISO.
+    goto :EOF
+)
+
+echo Generation des empreintes SHA256 des livrables...
+powershell -NoProfile -Command "$files = @('%OUTPUT%\SUPER_NOVA_RECOVERY.zip', '%OUTPUT%\SUPER_NOVA_RECOVERY.iso'); $lines = foreach ($file in $files) { $hash = Get-FileHash -LiteralPath $file -Algorithm SHA256; '{0} *{1}' -f $hash.Hash, (Split-Path -Leaf $file) }; $lines | Set-Content -Encoding ascii '%OUTPUT%\SHA256SUMS.txt'"
+if errorlevel 1 (
+    echo ERREUR : Impossible de generer SHA256SUMS.txt.
     goto :EOF
 )
 

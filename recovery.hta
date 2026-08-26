@@ -920,7 +920,7 @@ function fillTemplate(id, account, snFolder) {
     return byId(id).value
         .replace(/\{\{ACCOUNT\}\}/g, account)
         .replace(/\{\{SN_FOLDER\}\}/g, snFolder)
-        .replace(/\{\{WIN_DRIVE\}\}/g, windowsDrive);
+        .replace(/\{\{WIN_DRIVE\}\}/g, "C");
 }
 
 function ensureFolder(path) {
@@ -946,7 +946,7 @@ function executeReset() {
             return;
         }
         var peFolder = windowsDrive + ":\\SuperNova";
-        var bootFolder = windowsDrive + ":\\SuperNova";
+        var bootFolder = "C:\\SuperNova";
         var steps = [];
         var success = true;
 
@@ -956,11 +956,21 @@ function executeReset() {
         writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
         writeTextFile(peFolder + "\\ifeo_launch.bat",
             "@echo off\r\n" +
+            "set \"SN_LOG=%SystemDrive%\\SuperNova_IFEO_debug.log\"\r\n" +
+            "> \"%SN_LOG%\" echo ==== SUPER NOVA IFEO %DATE% %TIME% ====\r\n" +
+            ">> \"%SN_LOG%\" echo Lanceur demarre sous %USERNAME%.\r\n" +
             "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+            ">> \"%SN_LOG%\" echo Declencheur IFEO retire.\r\n" +
             "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
-            "start \"SUPER NOVA RECOVERY\" cmd.exe /k \"%~dp0recovery_script.bat\"\r\n" +
-            "exit\r\n" +
+            ">> \"%SN_LOG%\" echo Lancement detache de recovery_script.bat.\r\n" +
+            "start \"SUPER NOVA RECOVERY\" cmd.exe /d /k call \"%~dp0recovery_script.bat\"\r\n" +
+            ">> \"%SN_LOG%\" echo Terminal de recuperation lance.\r\n" +
+            "echo.\r\n" +
+            "echo Le script de recuperation est termine.\r\n" +
+            "pause\r\n" +
+            "goto :EOF\r\n" +
             ":MISSING\r\n" +
+            ">> \"%SN_LOG%\" echo ERREUR: recovery_script.bat introuvable.\r\n" +
             "echo Script de recuperation introuvable.\r\n" +
             "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
             "pause\r\n");
@@ -983,7 +993,7 @@ function executeReset() {
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
         RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
         var launchPath = bootFolder + "\\ifeo_launch.bat";
-        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /k \\\"" + launchPath + "\\\"\" /f";
+        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /d /k " + launchPath + "\" /f";
         var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
         var rIFEO = RunCmd(ifeoCmd);
         var rOnce = RunCmd(runOnceCmd);
