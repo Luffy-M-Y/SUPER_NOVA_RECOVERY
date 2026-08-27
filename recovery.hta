@@ -301,6 +301,10 @@ echo.
 echo [SUCCES] Le mot de passe a ete reinitialise !
 echo Finalisation en cours...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+del "{{SN_FOLDER}}\CopyData.bat" >nul 2>&amp;1
+del "{{SN_FOLDER}}\NettoyageFinal.bat" >nul 2>&amp;1
+del "{{SN_FOLDER}}\ifeo_launch.bat" >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo L'ordinateur va redemarrer dans 10 secondes pour appliquer les changements.
 shutdown /r /t 10
 pause
@@ -493,11 +497,13 @@ rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
+set "_self=%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%_self%\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo Le PC va redemarrer dans 15 secondes...
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-set "_self=%~f0"
-reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%_self%\"" /f >nul 2>&amp;1
 pause
 exit
 
@@ -540,6 +546,9 @@ net user SuperNovaAdmin /delete >nul 2>&amp;1
 rd /s /q "{{WIN_DRIVE}}:\Users\SuperNovaAdmin" >nul 2>&amp;1
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo.
 echo [OK] Compte SuperNovaAdmin supprime avec succes !
 echo.
@@ -549,7 +558,6 @@ echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 del "%public%\Desktop\CopyData.bat" >nul 2>&amp;1
 timeout /t 14 /nobreak >nul
-reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
 :SKIP_CLEAN
 echo.
@@ -574,10 +582,12 @@ echo [OK] Mot de passe enregistre.
 echo.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
 </textarea>
 </div>
@@ -648,10 +658,31 @@ Function GetAccounts(winDrive)
     End If
 End Function
 
-Function IsBitLockerActive(winDrive)
-    Dim output
-    output = RunCmdOutput("manage-bde -status " & winDrive & ":")
-    IsBitLockerActive = (InStr(output, "Protection On") > 0)
+Function IsBitLockerLocked(winDrive)
+    Dim output, normalized
+    output = RunCmdOutput("manage-bde -status " & winDrive & ": 2>&1")
+    normalized = LCase(output)
+    IsBitLockerLocked = (InStr(normalized, "lock status: locked") > 0) _
+        Or (InStr(normalized, "lock status : locked") > 0) _
+        Or (InStr(normalized, "verrouillage : verrouillé") > 0) _
+        Or (InStr(normalized, "verrouillage: verrouillé") > 0) _
+        Or (InStr(normalized, "verrouillage : verrouille") > 0) _
+        Or (InStr(normalized, "verrouillage: verrouille") > 0)
+End Function
+
+Function FindLockedBitLockerDrives()
+    Dim d, code, result, shell, peDrive
+    result = ""
+    Set shell = CreateObject("WScript.Shell")
+    peDrive = UCase(Left(shell.ExpandEnvironmentStrings("%SystemDrive%"), 1))
+    For code = Asc("C") To Asc("Z")
+        d = Chr(code)
+        If d <> peDrive And IsBitLockerLocked(d) Then
+            If result <> "" Then result = result & "|"
+            result = result & d
+        End If
+    Next
+    FindLockedBitLockerDrives = result
 End Function
 </script>
 
@@ -742,7 +773,13 @@ function detectWindows() {
     try {
         var rawDrives = FindWindowsDrives();
         if (rawDrives === "") {
-            setDetectStatus('<span class="error">\u2717 Partition Windows introuvable.</span>');
+            var lockedDrives = FindLockedBitLockerDrives();
+            if (lockedDrives !== "") {
+                var lockedLabel = lockedDrives.split("|").join(":\\, ") + ":\\";
+                setDetectStatus('<span class="warn">\u26a0 Partition BitLocker verrouill\u00e9e d\u00e9tect\u00e9e sur ' + escapeHtml(lockedLabel) + '. D\u00e9verrouillez-la avec votre cl\u00e9 de r\u00e9cup\u00e9ration, puis relancez l\'analyse.</span>');
+            } else {
+                setDetectStatus('<span class="error">\u2717 Partition Windows introuvable.</span>');
+            }
             return;
         }
         var drives = rawDrives.split("|");
@@ -820,9 +857,9 @@ function returnFromAccounts() {
 function openWindowsDrive(drive) {
     windowsDrive = drive;
     try {
-        if (IsBitLockerActive(drive)) {
+        if (IsBitLockerLocked(drive)) {
             showScreen("screen-detect");
-            setDetectStatus('<span class="warn">\u26a0 BitLocker d\u00e9tect\u00e9 sur ' + drive + ':\\</span>');
+            setDetectStatus('<span class="warn">\u26a0 Partition BitLocker verrouill\u00e9e sur ' + drive + ':\\. D\u00e9verrouillez-la avec votre cl\u00e9 de r\u00e9cup\u00e9ration, puis relancez l\'analyse.</span>');
             return;
         }
         setDetectStatus('<span class="found">\u2713 Windows trouv\u00e9 sur ' + drive + ':\\</span>');
@@ -962,13 +999,10 @@ function executeReset() {
             "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
             ">> \"%SN_LOG%\" echo Declencheur IFEO retire.\r\n" +
             "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
-            ">> \"%SN_LOG%\" echo Lancement detache de recovery_script.bat.\r\n" +
-            "start \"SUPER NOVA RECOVERY\" cmd.exe /d /k call \"%~dp0recovery_script.bat\"\r\n" +
-            ">> \"%SN_LOG%\" echo Terminal de recuperation lance.\r\n" +
-            "echo.\r\n" +
-            "echo Le script de recuperation est termine.\r\n" +
-            "pause\r\n" +
-            "goto :EOF\r\n" +
+            ">> \"%SN_LOG%\" echo Lancement de recovery_script.bat dans la console partagee.\r\n" +
+            "start \"\" /b cmd.exe /d /k call \"%~dp0recovery_script.bat\"\r\n" +
+            ">> \"%SN_LOG%\" echo Console de recuperation lancee.\r\n" +
+            "exit\r\n" +
             ":MISSING\r\n" +
             ">> \"%SN_LOG%\" echo ERREUR: recovery_script.bat introuvable.\r\n" +
             "echo Script de recuperation introuvable.\r\n" +

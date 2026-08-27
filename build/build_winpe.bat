@@ -64,6 +64,26 @@ if errorlevel 1 (
     echo ERREUR : Impossible d'ajouter WinPE-Scripting_fr-fr.cab
     goto :EOF
 )
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-WMI.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-WMI.cab
+    goto :EOF
+)
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-WMI_fr-fr.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-WMI_fr-fr.cab
+    goto :EOF
+)
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-SecureStartup.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-SecureStartup.cab
+    goto :EOF
+)
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-SecureStartup_fr-fr.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-SecureStartup_fr-fr.cab
+    goto :EOF
+)
 mkdir "%MOUNT%\SuperNova"
 copy /Y "%PROJECT%recovery.hta" "%MOUNT%\SuperNova\"
 if errorlevel 1 (
