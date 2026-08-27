@@ -1024,6 +1024,32 @@ function executeReset() {
         steps.push("\u2713 Dossier des scripts verrouill\u00e9 (lecture seule pour les utilisateurs standard)");
         steps.push("\u2713 Permissions du dossier v\u00e9rifi\u00e9es");
 
+        var backupFolder = peFolder + "\\Backup";
+        ensureFolder(backupFolder);
+        var backupAclCmd = "icacls \"" + backupFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F";
+        var rBackupAcl = RunCmd(backupAclCmd);
+        if (rBackupAcl !== 0) {
+            renderResult(false, ["\u2717 Impossible de prot\u00e9ger la sauvegarde des ruches (code " + rBackupAcl + "). L'op\u00e9ration est interrompue."]);
+            return;
+        }
+        var rBackupVerify = RunCmd("icacls \"" + backupFolder + "\" /verify");
+        if (rBackupVerify !== 0) {
+            renderResult(false, ["\u2717 Les permissions de la sauvegarde sont invalides (code " + rBackupVerify + "). L'op\u00e9ration est interrompue."]);
+            return;
+        }
+        var hives = ["SAM", "SYSTEM", "SECURITY"];
+        for (var h = 0; h < hives.length; h++) {
+            var hive = hives[h];
+            var sourceHive = windowsDrive + ":\\Windows\\System32\\config\\" + hive;
+            var targetHive = backupFolder + "\\" + hive;
+            var rBackup = RunCmd("copy /Y \"" + sourceHive + "\" \"" + targetHive + "\"");
+            if (rBackup !== 0) {
+                renderResult(false, ["\u2717 Sauvegarde de la ruche " + hive + " impossible (code " + rBackup + "). L'op\u00e9ration est interrompue avant toute modification."]);
+                return;
+            }
+        }
+        steps.push("\u2713 Sauvegarde prot\u00e9g\u00e9e des ruches SAM, SYSTEM et SECURITY");
+
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
         RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
         var launchPath = bootFolder + "\\ifeo_launch.bat";
