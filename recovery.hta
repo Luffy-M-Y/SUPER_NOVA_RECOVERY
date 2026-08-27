@@ -285,16 +285,18 @@ echo.
 echo Compte cible : {{ACCOUNT}}
 echo.
 :ASK_PWD
-set "newpwd="
-set /p newpwd="Entrez le nouveau mot de passe : "
-if "%newpwd%"=="" (
-    echo [ERREUR] Le mot de passe ne peut pas etre vide.
-    goto :ASK_PWD
-)
+echo Entrez le nouveau mot de passe. Windows vous demandera une confirmation masquee.
 echo.
-net user "{{ACCOUNT}}" "%newpwd%"
+net user "{{ACCOUNT}}" *
 if %ERRORLEVEL% EQU 0 goto :SUCCESS
-goto :MS_ACCOUNT
+echo.
+echo [ERREUR] Les mots de passe ne correspondent pas, sont invalides, ou le compte est Microsoft.
+echo 1 - Recommencer la saisie
+echo 2 - Compte Microsoft (recuperer mes donnees)
+set "pwdChoice="
+set /p pwdChoice="Choix : "
+if /I "%pwdChoice%"=="2" goto :MS_ACCOUNT
+goto :ASK_PWD
 
 :SUCCESS
 echo.
@@ -335,22 +337,15 @@ echo Avant de creer le compte SuperNovaAdmin,
 echo definissez un mot de passe obligatoire.
 echo Notez-le : il servira a la connexion apres redemarrage.
 :SN_ADMIN_PWD
-set "snAdminPass="
-set /p snAdminPass="Mot de passe SuperNovaAdmin : "
-if "%snAdminPass%"=="" (
-    echo [ERREUR] Le mot de passe ne peut pas etre vide.
-    goto :SN_ADMIN_PWD
-)
 echo.
 echo Creation du compte SuperNovaAdmin...
 net user SuperNovaAdmin >nul 2>&amp;1
 if not errorlevel 1 goto :SN_ADMIN_EXISTS
-net user SuperNovaAdmin "%snAdminPass%" /add >nul 2>&amp;1
+net user SuperNovaAdmin * /add
 if errorlevel 1 (
     echo [ERREUR] Creation impossible. Le mot de passe ne respecte peut-etre pas la politique Windows.
     goto :SN_ADMIN_PWD
 )
-set "snAdminPass="
 net localgroup Administrateurs SuperNovaAdmin /add >nul 2>&amp;1
 net localgroup Administrators SuperNovaAdmin /add >nul 2>&amp;1
 echo [OK] Compte SuperNovaAdmin cree avec succes.
@@ -447,18 +442,13 @@ goto :END_SCRIPT
 :CREATE_ACCOUNT
 echo.
 set "newUser="
-set "newPass="
 set /p newUser="Nom du nouveau compte : "
 if "%newUser%"=="" (
     echo [ERREUR] Le nom de compte ne peut pas etre vide.
     goto :CREATE_ACCOUNT
 )
-set /p newPass="Mot de passe (Notez-le bien !) : "
-if "%newPass%"=="" (
-    echo [ERREUR] Le mot de passe ne peut pas etre vide.
-    goto :CREATE_ACCOUNT
-)
-net user "%newUser%" "%newPass%" /add >nul 2>&amp;1
+echo Entrez le mot de passe. Windows demandera une confirmation masquee.
+net user "%newUser%" * /add
 if errorlevel 1 (
     echo [ERREUR] Creation impossible. Verifiez le nom et la complexite du mot de passe.
     goto :CREATE_ACCOUNT
@@ -574,10 +564,9 @@ echo.
 echo Le compte SuperNovaAdmin a deja un mot de passe.
 echo Saisissez-le a nouveau, ou choisissez-en un autre.
 :PWD_LOOP2
-set "adminPass="
-set /p adminPass="Mot de passe SuperNovaAdmin : "
-if "%adminPass%"=="" goto :PWD_LOOP2
-net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
+echo Entrez le nouveau mot de passe. Windows demandera une confirmation masquee.
+net user SuperNovaAdmin *
+if errorlevel 1 goto :PWD_LOOP2
 echo [OK] Mot de passe enregistre.
 echo.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
