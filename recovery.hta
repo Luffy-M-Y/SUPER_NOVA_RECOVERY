@@ -303,6 +303,7 @@ echo.
 echo [SUCCES] Le mot de passe a ete reinitialise !
 echo Finalisation en cours...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
 del "{{SN_FOLDER}}\CopyData.bat" >nul 2>&amp;1
 del "{{SN_FOLDER}}\NettoyageFinal.bat" >nul 2>&amp;1
 del "{{SN_FOLDER}}\ifeo_launch.bat" >nul 2>&amp;1
@@ -487,6 +488,7 @@ rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
 set "_self=%~f0"
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%_self%\"" /f >nul 2>&amp;1
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
@@ -536,6 +538,7 @@ net user SuperNovaAdmin /delete >nul 2>&amp;1
 rd /s /q "{{WIN_DRIVE}}:\Users\SuperNovaAdmin" >nul 2>&amp;1
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
 start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
@@ -571,6 +574,7 @@ echo [OK] Mot de passe enregistre.
 echo.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
 start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
