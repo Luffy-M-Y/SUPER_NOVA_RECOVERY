@@ -443,9 +443,10 @@ goto :END_SCRIPT
 :CREATE_ACCOUNT
 echo.
 set "newUser="
-set /p newUser="Nom du nouveau compte : "
-if "%newUser%"=="" (
-    echo [ERREUR] Le nom de compte ne peut pas etre vide.
+set /p "newUser=Nom du nouveau compte : "
+powershell -NoProfile -Command "$u=$env:newUser; if ($u -notmatch '^[A-Za-z0-9._-]{1,20}$') { exit 1 }"
+if errorlevel 1 (
+    echo [ERREUR] Nom invalide. Utilisez 1 a 20 caracteres : lettres, chiffres, point, tiret ou underscore.
     goto :CREATE_ACCOUNT
 )
 echo Entrez le mot de passe. Windows demandera une confirmation masquee.
