@@ -1,60 +1,100 @@
 # SUPER NOVA RECOVERY
 
-Environnement WinPE bootable pour réinitialiser un mot de passe de compte local Windows.
+Outil WinPE hors ligne permettant de récupérer l’accès à un compte local Windows autorisé, sans envoyer de données sur Internet.
+
+## Fonctionnalités
+
+- écran de politique de confidentialité avec acceptation obligatoire avant l’analyse ;
+- interface disponible en français et en anglais ;
+- détection de toutes les installations Windows accessibles sur les volumes montés ;
+- sélection explicite de la partition Windows à analyser ;
+- détection des volumes BitLocker verrouillés et exclusion de ces volumes ;
+- sauvegarde protégée des ruches système avant toute modification ;
+- réinitialisation d’un compte local via un déclencheur IFEO à usage unique ;
+- nettoyage automatique des fichiers temporaires et du déclencheur après l’opération ;
+- indicateur animé pendant l’application des modifications.
 
 ## Architecture
 
-```
+```text
 SUPER_NOVA_RECOVERY/
-├── recovery.hta          ← Interface graphique + flux de réinitialisation (IFEO)
-├── recovery.bat          ← Inerte (ancienne méthode sethc.exe, ne plus utiliser)
+├── recovery.hta          Interface graphique et flux de récupération
+├── recovery.bat          Ancienne méthode, conservée inactive et non copiée dans WinPE
 ├── assets/
-│   └── supernova.ico     ← Icône de l'application
+│   └── SUPER_NOVA.ico    Icône de l’application
 ├── build/
-│   ├── build_winpe.bat   ← Construit l'image WinPE (nécessite ADK)
-│   └── winpeshl.ini      ← Lance recovery.hta au démarrage WinPE
-└── output/               ← Contient SUPER_NOVA_RECOVERY.zip (livrable final)
+│   ├── build_winpe.bat   Construction de l’image WinPE (ADK requis)
+│   └── winpeshl.ini      Lancement automatique de recovery.hta
+└── output/
+    ├── SUPER_NOVA_RECOVERY.iso
+    ├── SUPER_NOVA_RECOVERY.zip
+    └── SHA256SUMS.txt
 ```
 
-## Prérequis (Phase 4 — Build)
+## Prérequis
 
 Installer dans cet ordre :
-1. **Windows ADK** — cocher uniquement "Deployment Tools"
-   https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install
-2. **WinPE Add-on pour l'ADK** (lien sur la même page)
 
-Espace requis : ~10 Go | Droits administrateur requis
+1. **Windows ADK**, avec le composant **Deployment Tools** ;
+2. **WinPE Add-on pour l’ADK**.
 
-## Méthode de réinitialisation
+La construction doit être lancée dans **Deployment and Imaging Tools Environment** avec des droits administrateur.
 
-**Méthode IFEO (via `recovery.hta` uniquement)** :
-1. WinPE démarre → `recovery.hta` se lance automatiquement (`winpeshl.ini`)
-2. L'utilisateur choisit un compte et confirme
-3. L'outil écrit les scripts sur la partition Windows et pose un Debugger IFEO sur `sethc.exe` (lanceur one-shot)
-4. Après redémarrage, 5× Maj lance le script (SYSTEM) pour réinitialiser le mot de passe
-5. Le lanceur retire la clé IFEO **dès l'ouverture** (crash / abandon / script manquant inclus). Un `RunOnce` la retire aussi à la prochaine connexion réussie si 5× Maj n'a pas été utilisé. Le script se supprime s'il va jusqu'au bout
+Prévoir environ 10 Go d’espace libre.
 
-`recovery.bat` n'est **pas** copié dans l'image WinPE. S'il est lancé à la main, il n'effectue **aucune** modification système (plus de remplacement de `sethc.exe` par `cmd.exe`).
+## Fonctionnement
 
-## Limitations connues
+1. Démarrer sur l’ISO WinPE SUPER NOVA RECOVERY.
+2. Lire et accepter la politique de confidentialité.
+3. Lancer l’analyse des volumes et sélectionner l’installation Windows cible.
+4. Sélectionner le compte local à récupérer et confirmer l’opération.
+5. L’outil sauvegarde les ruches système, protège ses scripts et configure le déclencheur IFEO.
+6. Redémarrer la machine, puis appuyer cinq fois sur **Maj** à l’écran de connexion.
+7. Le script s’exécute sous SYSTEM, retire immédiatement le déclencheur et effectue la récupération.
+8. Les fichiers temporaires et les sauvegardes sont supprimés lorsque le parcours est terminé.
+
+Le compte Microsoft n’est pas réinitialisé localement : l’outil affiche le lien officiel de récupération Microsoft. La récupération des données peut toutefois être proposée selon le parcours choisi.
+
+## BitLocker
+
+- Un volume BitLocker verrouillé est détecté puis exclu de l’analyse.
+- Il doit être déverrouillé avec sa clé de récupération avant de relancer l’opération.
+- Un volume BitLocker déjà déverrouillé peut être analysé normalement.
+
+## Limitations
 
 | Cas | Comportement |
 |-----|-------------|
-| Compte Microsoft (@outlook, @hotmail) | ❌ Impossible — passer par account.live.com |
-| Disque chiffré BitLocker | ⚠️ Nécessite la clé de récupération BitLocker |
-| Compte Azure AD / Microsoft 365 | ❌ Impossible — contacter l'admin IT |
-| Compte local | ✅ Fonctionne |
+| Compte local | Récupération prise en charge |
+| Compte Microsoft (@outlook, @hotmail, etc.) | Réinitialisation locale impossible ; utiliser account.live.com |
+| Compte Azure AD / Microsoft 365 | Non pris en charge ; contacter l’administrateur informatique |
+| BitLocker verrouillé | Volume exclu jusqu’à déverrouillage |
+| Plusieurs installations Windows | L’utilisateur choisit explicitement le volume cible |
 
-## Build
+## Construction
 
 ```bat
-REM Ouvrir "Deployment and Imaging Tools Environment" en admin
+REM Ouvrir « Deployment and Imaging Tools Environment » en administrateur
 cd build
 build_winpe.bat
-REM → Produit output/SUPER_NOVA_RECOVERY.zip
 ```
 
-## Livrable
+Les livrables sont créés dans `output/` :
 
-`output/SUPER_NOVA_RECOVERY.zip` = contenu du dossier `media\` WinPE.  
-Ce fichier est extrait sur une clé USB FAT32 par l'application SUPER NOVA.
+- `SUPER_NOVA_RECOVERY.iso` : image bootable pour une machine virtuelle ou un lecteur optique ;
+- `SUPER_NOVA_RECOVERY.zip` : contenu WinPE à extraire sur une clé USB FAT32 ;
+- `SHA256SUMS.txt` : empreintes SHA-256 des deux livrables.
+
+## Vérification d’intégrité
+
+Dans PowerShell :
+
+```powershell
+Get-FileHash .\output\SUPER_NOVA_RECOVERY.iso -Algorithm SHA256
+Get-FileHash .\output\SUPER_NOVA_RECOVERY.zip -Algorithm SHA256
+Get-Content .\output\SHA256SUMS.txt
+```
+
+## Utilisation responsable
+
+Utiliser cet outil uniquement sur une machine et des données pour lesquels vous disposez d’une autorisation. L’opération modifie le registre et certains fichiers système de l’installation Windows sélectionnée.
