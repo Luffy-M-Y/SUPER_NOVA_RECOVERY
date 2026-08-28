@@ -72,6 +72,14 @@ body {
     margin-top: 6px;
     letter-spacing: 0.5px;
 }
+.logo select {
+    margin-top: 10px;
+    padding: 5px 8px;
+    background: #292929;
+    color: #ddd;
+    border: 1px solid #444;
+    border-radius: 3px;
+}
 
 .screen { display: none; }
 .screen.active { display: block; }
@@ -203,61 +211,65 @@ body {
 <div id="app">
     <div class="logo">
         <h1>⚡ SUPER NOVA RECOVERY</h1>
-        <p>Réinitialisation de mot de passe Windows</p>
+        <p data-i18n="subtitle">Réinitialisation de mot de passe Windows</p>
+        <select id="language-select" onchange="setLanguage(this.value)" aria-label="Language">
+            <option value="fr" selected>Français</option>
+            <option value="en">English</option>
+        </select>
     </div>
 
     <div id="screen-detect" class="screen active">
         <div class="status-box">
-            <div class="label">Statut de détection</div>
-            <div id="detect-status" class="info">
+            <div class="label" data-i18n="detectionStatus">Statut de détection</div>
+            <div id="detect-status" class="info" data-i18n="searching">
                 <span class="spinner"></span> Recherche de la partition Windows...
             </div>
         </div>
         <button class="btn btn-primary" id="btn-detect" onclick="detectWindows()">
-            Analyser les disques
+            <span data-i18n="analyzeDisks">Analyser les disques</span>
         </button>
     </div>
 
     <div id="screen-windows" class="screen">
-        <div class="section-title">Installations Windows détectées</div>
+        <div class="section-title" data-i18n="windowsDetected">Installations Windows détectées</div>
         <div id="windows-list"></div>
         <div id="windows-error" class="inline-error hidden"></div>
         <div class="warning-box">
-            ⚠️ Plusieurs installations Windows ont été trouvées. Sélectionnez celle à analyser.
+            <span data-i18n="multipleWindows">⚠️ Plusieurs installations Windows ont été trouvées. Sélectionnez celle à analyser.</span>
         </div>
         <button class="btn btn-primary" id="btn-windows" onclick="confirmWindowsDrive()" disabled>
-            Continuer avec cette partition
+            <span data-i18n="continuePartition">Continuer avec cette partition</span>
         </button>
         <button class="btn btn-ghost" onclick="returnToDetection()">← Retour</button>
     </div>
 
     <div id="screen-accounts" class="screen">
-        <div class="section-title">Comptes détectés sur <span id="drive-label"></span></div>
+        <div class="section-title"><span data-i18n="accountsDetected">Comptes détectés sur</span> <span id="drive-label"></span></div>
         <div id="accounts-list"></div>
         <div class="warning-box">
-            ⚠️ Fonctionne uniquement avec les comptes locaux.<br>
-            Compte Microsoft (@outlook, @hotmail) → <strong>account.live.com</strong>
+            <span data-i18n="localOnly">⚠️ Fonctionne uniquement avec les comptes locaux.</span><br>
+            <span data-i18n="microsoftHelp">Compte Microsoft (@outlook, @hotmail) → <strong>account.live.com</strong></span>
         </div>
         <button class="btn btn-danger" id="btn-reset" onclick="confirmReset()" disabled>
-            🔑 Réinitialiser le mot de passe
+            <span data-i18n="resetPassword">🔑 Réinitialiser le mot de passe</span>
         </button>
         <button class="btn btn-ghost" onclick="returnFromAccounts()">← Retour</button>
     </div>
 
     <div id="screen-confirm" class="screen">
         <div class="status-box">
-            <div class="label">Compte sélectionné</div>
+            <div class="label" data-i18n="selectedAccount">Compte sélectionné</div>
             <div id="confirm-account" class="confirm-name"></div>
             <div id="confirm-type" class="confirm-type"></div>
         </div>
         <div class="warning-box">
-            ⚠️ Cette opération va modifier des fichiers système Windows.<br>
+            <span data-i18n="confirmWarning">⚠️ Cette opération va modifier des fichiers système Windows.<br>
             Assurez-vous d'avoir l'autorisation d'accéder à ce PC.<br>
             Le déclencheur 5× Maj est à usage unique : il est retiré dès le lancement
-            (et à la prochaine connexion si 5× Maj n'est pas utilisé).
+            (et à la prochaine connexion si 5× Maj n'est pas utilisé).</span>
         </div>
         <button class="btn btn-danger" onclick="executeReset()">
-            ✓ Confirmer la réinitialisation
+            <span data-i18n="confirmReset">✓ Confirmer la réinitialisation</span>
         </button>
         <button class="btn btn-ghost" onclick="showScreen('screen-accounts')">← Annuler</button>
     </div>
@@ -265,8 +277,8 @@ body {
     <div id="screen-result" class="screen">
         <div class="status-box" id="result-status"></div>
         <div class="steps" id="result-steps"></div>
-        <button class="btn btn-primary hidden" id="btn-reboot" onclick="reboot()">↺ Redémarrer le PC</button>
-        <button class="btn btn-ghost" onclick="showScreen('screen-detect')">Recommencer</button>
+        <button class="btn btn-primary hidden" id="btn-reboot" onclick="reboot()"><span data-i18n="reboot">↺ Redémarrer le PC</span></button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-detect')"><span data-i18n="restartAnalysis">Recommencer</span></button>
     </div>
 </div>
 </div>
@@ -716,7 +728,7 @@ End Function
 
 <script language="JavaScript">
 window.onerror = function(msg, url, line) {
-    setDetectStatus('<span class="error">✗ ERREUR CRITIQUE : ' + msg + ' (ligne ' + line + ')</span>');
+    setDetectStatus('<span class="error">' + formatText("criticalError", {error: escapeHtml(msg), line: line}) + '</span>');
     return true;
 };
 
@@ -726,6 +738,140 @@ var selectedWindowsDrive = "";
 var detectedWindowsDrives = [];
 var accounts = [];
 var screenIds = ["screen-detect", "screen-windows", "screen-accounts", "screen-confirm", "screen-result"];
+var currentLanguage = "fr";
+var translations = {
+    fr: {
+        subtitle: "Réinitialisation de mot de passe Windows",
+        detectionStatus: "Statut de détection",
+        searching: '<span class="spinner"></span> Recherche de la partition Windows...',
+        analyzeDisks: "Analyser les disques",
+        windowsDetected: "Installations Windows détectées",
+        multipleWindows: "⚠️ Plusieurs installations Windows ont été trouvées. Sélectionnez celle à analyser.",
+        continuePartition: "Continuer avec cette partition",
+        accountsDetected: "Comptes détectés sur",
+        localOnly: "⚠️ Fonctionne uniquement avec les comptes locaux.",
+        microsoftHelp: "Compte Microsoft (@outlook, @hotmail) → <strong>account.live.com</strong>",
+        resetPassword: "🔑 Réinitialiser le mot de passe",
+        selectedAccount: "Compte sélectionné",
+        confirmWarning: "⚠️ Cette opération va modifier des fichiers système Windows.<br>Assurez-vous d'avoir l'autorisation d'accéder à ce PC.<br>Le déclencheur 5× Maj est à usage unique : il est retiré dès le lancement<br>(et à la prochaine connexion si 5× Maj n'est pas utilisé).",
+        confirmReset: "✓ Confirmer la réinitialisation",
+        reboot: "↺ Redémarrer le PC",
+        restartAnalysis: "Recommencer",
+        windowsOn: "🖥️ Windows sur {drive}:\\",
+        windowsPartition: "Partition contenant les fichiers système Windows",
+        detectionAgain: "Choisissez « Analyser les disques » pour relancer la recherche.",
+        bitlocker: "⚠ Partition BitLocker verrouillée détectée sur {drives}. Déverrouillez-la avec votre clé de récupération, puis relancez l'analyse.",
+        windowsNotFound: "✗ Partition Windows introuvable.",
+        windowsFound: "✓ Windows trouvé sur {drive}:\\",
+        bitlockerDrive: "⚠ Partition BitLocker verrouillée sur {drive}:\\. Déverrouillez-la avec votre clé de récupération, puis relancez l'analyse.",
+        noAccounts: "Aucun compte local personnel trouvé sur {drive}:\\. Sélectionnez une autre installation Windows.",
+        noAccountsSingle: "⚠ Aucun compte local personnel trouvé sur {drive}:\\",
+        samUnreadable: "✗ SAM illisible : {error}",
+        criticalError: "✗ ERREUR CRITIQUE : {error} (ligne {line})",
+        operationError: "✗ Erreur : {error}",
+        invalidSelection: "⚠ Veuillez sélectionner un compte avant de continuer.",
+        invalidAccount: "⚠ Nom de compte invalide. Sélectionnez un autre compte.",
+        operationInProgress: "Opération en cours",
+        applyingChanges: "Application des modifications...",
+        result: "Résultat",
+        readySteps: "✓ Prêt ! Suivez les étapes ci-dessous.",
+        permissionsVerified: "✓ Permissions du dossier vérifiées",
+        nextSteps: "Prochaines étapes",
+        removeUsb: "🔌 Retirez la clé USB",
+        restartPc: "🔄 Redémarrez le PC",
+        shiftInstruction: "Sur l'écran de login → appuyez <strong class=\"hl\">5x sur Maj</strong> (une seule fois)",
+        triggerInstruction: "Suivez les instructions à l'écran — le déclencheur SYSTEM est retiré dès l'ouverture",
+        operationFailed: "✗ Opération échouée",
+        restarting: "Redémarrage",
+        restartInProgress: "↺ Redémarrage en cours...",
+        builtinAdmin: "Administrateur intégré",
+        windowsAccount: "Compte Windows",
+        scriptGenerated: "✓ Script de réinitialisation généré",
+        scriptsLocked: "✓ Dossier des scripts verrouillé (lecture seule pour les utilisateurs standard)",
+        permissionsChecked: "✓ Permissions du dossier vérifiées",
+        backupProtected: "✓ Sauvegarde protégée des ruches SAM, SYSTEM et SECURITY",
+        ifeoConfigured: "✓ Options d'exécution (IFEO) configurées (usage unique)",
+        ifeoCleanup: "✓ Filet IFEO : nettoyage à la prochaine connexion",
+        runOnceWarning: "⚠ Filet RunOnce non posé (code {code}) — le déclencheur reste à usage unique",
+        readyReboot: "✓ L'ordinateur est prêt. Retirez la clé et redémarrez.",
+        ifeoFailed: "✗ Impossible d'injecter la clé IFEO (code {code})"
+    },
+    en: {
+        subtitle: "Windows password reset",
+        detectionStatus: "Detection status",
+        searching: '<span class="spinner"></span> Searching for a Windows partition...',
+        analyzeDisks: "Scan disks",
+        windowsDetected: "Detected Windows installations",
+        multipleWindows: "⚠️ Several Windows installations were found. Select the one to analyze.",
+        continuePartition: "Continue with this partition",
+        accountsDetected: "Accounts detected on",
+        localOnly: "⚠️ Works only with local accounts.",
+        microsoftHelp: "Microsoft account (@outlook, @hotmail) → <strong>account.live.com</strong>",
+        resetPassword: "🔑 Reset password",
+        selectedAccount: "Selected account",
+        confirmWarning: "⚠️ This operation will modify Windows system files.<br>Make sure you are authorized to access this PC.<br>The 5× Shift trigger is one-time and is removed when launched<br>(and at the next sign-in if 5× Shift is not used).",
+        confirmReset: "✓ Confirm reset",
+        reboot: "↺ Restart the PC",
+        restartAnalysis: "Start over",
+        windowsOn: "🖥️ Windows on {drive}:\\",
+        windowsPartition: "Partition containing Windows system files",
+        detectionAgain: "Choose “Scan disks” to search again.",
+        bitlocker: "⚠ Locked BitLocker partition detected on {drives}. Unlock it with your recovery key, then scan again.",
+        windowsNotFound: "✗ Windows partition not found.",
+        windowsFound: "✓ Windows found on {drive}:\\",
+        bitlockerDrive: "⚠ Locked BitLocker partition on {drive}:\\. Unlock it with your recovery key, then scan again.",
+        noAccounts: "No personal local account found on {drive}:\\. Select another Windows installation.",
+        noAccountsSingle: "⚠ No personal local account found on {drive}:\\",
+        samUnreadable: "✗ SAM cannot be read: {error}",
+        criticalError: "✗ CRITICAL ERROR: {error} (line {line})",
+        operationError: "✗ Error: {error}",
+        invalidSelection: "⚠ Select an account before continuing.",
+        invalidAccount: "⚠ Invalid account name. Select another account.",
+        operationInProgress: "Operation in progress",
+        applyingChanges: "Applying changes...",
+        result: "Result",
+        readySteps: "✓ Ready! Follow the steps below.",
+        permissionsVerified: "✓ Folder permissions verified",
+        nextSteps: "Next steps",
+        removeUsb: "🔌 Remove the USB drive",
+        restartPc: "🔄 Restart the PC",
+        shiftInstruction: "On the login screen → press <strong class=\"hl\">Shift 5 times</strong> (once)",
+        triggerInstruction: "Follow the on-screen instructions — the SYSTEM trigger is removed at launch",
+        operationFailed: "✗ Operation failed",
+        restarting: "Restart",
+        restartInProgress: "↺ Restarting...",
+        builtinAdmin: "Built-in administrator",
+        windowsAccount: "Windows account",
+        scriptGenerated: "✓ Reset script generated",
+        scriptsLocked: "✓ Script folder locked (read-only for standard users)",
+        permissionsChecked: "✓ Folder permissions verified",
+        backupProtected: "✓ Protected backup of SAM, SYSTEM and SECURITY hives",
+        ifeoConfigured: "✓ IFEO execution options configured (one-time use)",
+        ifeoCleanup: "✓ IFEO cleanup scheduled at next sign-in",
+        runOnceWarning: "⚠ RunOnce fallback not set (code {code}) — trigger remains one-time",
+        readyReboot: "✓ The computer is ready. Remove the USB drive and restart.",
+        ifeoFailed: "✗ Could not inject IFEO (code {code})"
+    }
+};
+
+function formatText(key, values) {
+    var value = translations[currentLanguage][key] || translations.fr[key] || key;
+    if (values) for (var name in values) value = value.replace(new RegExp("\\{" + name + "\\}", "g"), values[name]);
+    return value;
+}
+
+function t(key) {
+    return formatText(key);
+}
+
+function setLanguage(lang) {
+    currentLanguage = (lang === "en") ? "en" : "fr";
+    var nodes = document.getElementsByTagName("*");
+    for (var i = 0; i < nodes.length; i++) {
+        var key = nodes[i].getAttribute("data-i18n");
+        if (key) nodes[i].innerHTML = t(key);
+    }
+}
 
 function byId(id) {
     return document.getElementById(id);
@@ -750,7 +896,7 @@ function isSafeAccountName(name) {
 }
 
 function accountTypeLabel(name) {
-    return isBuiltinAdmin(name) ? "Administrateur int\u00e9gr\u00e9" : "Compte Windows";
+    return isBuiltinAdmin(name) ? t("builtinAdmin") : t("windowsAccount");
 }
 
 function escapeHtml(s) {
@@ -793,20 +939,21 @@ window.onload = function() {
     );
     byId("app").style.maxHeight = Math.round(h * 0.88) + "px";
     byId("accounts-list").style.maxHeight = Math.round(h * 0.30) + "px";
+    setLanguage(currentLanguage);
     setTimeout(detectWindows, 500);
 };
 
 function detectWindows() {
-    setDetectStatus('<span class="spinner"></span> Recherche en cours...');
+    setDetectStatus('<span class="spinner"></span> ' + (currentLanguage === "en" ? "Searching..." : "Recherche en cours..."));
     try {
         var rawDrives = FindWindowsDrives();
         if (rawDrives === "") {
             var lockedDrives = FindLockedBitLockerDrives();
             if (lockedDrives !== "") {
                 var lockedLabel = lockedDrives.split("|").join(":\\, ") + ":\\";
-                setDetectStatus('<span class="warn">\u26a0 Partition BitLocker verrouill\u00e9e d\u00e9tect\u00e9e sur ' + escapeHtml(lockedLabel) + '. D\u00e9verrouillez-la avec votre cl\u00e9 de r\u00e9cup\u00e9ration, puis relancez l\'analyse.</span>');
+                setDetectStatus('<span class="warn">' + formatText("bitlocker", {drives: escapeHtml(lockedLabel)}) + '</span>');
             } else {
-                setDetectStatus('<span class="error">\u2717 Partition Windows introuvable.</span>');
+                setDetectStatus('<span class="error">' + t("windowsNotFound") + '</span>');
             }
             return;
         }
@@ -819,7 +966,7 @@ function detectWindows() {
         renderWindowsDrives(drives);
         showScreen("screen-windows");
     } catch (e) {
-        setDetectStatus('<span class="error">\u2717 Erreur : ' + e.message + '</span>');
+        setDetectStatus('<span class="error">' + formatText("operationError", {error: escapeHtml(e.message)}) + '</span>');
     }
 }
 
@@ -833,8 +980,8 @@ function renderWindowsDrives(drives) {
         var div = document.createElement("div");
         div.className = "account-item";
         div.setAttribute("data-drive", drive);
-        div.innerHTML = '<div class="acc-name">\ud83d\uddb4\ufe0f Windows sur ' + escapeHtml(drive) + ':\\</div>' +
-            '<div class="acc-type">Partition contenant les fichiers syst\u00e8me Windows</div>';
+        div.innerHTML = '<div class="acc-name">' + formatText("windowsOn", {drive: escapeHtml(drive)}) + '</div>' +
+            '<div class="acc-type">' + t("windowsPartition") + '</div>';
         div.onclick = function() { selectWindowsDrive(this); };
         list.appendChild(div);
     }
@@ -870,7 +1017,7 @@ function showWindowsError(message) {
 function returnToDetection() {
     selectedWindowsDrive = "";
     showScreen("screen-detect");
-    setDetectStatus('<span class="info">Choisissez « Analyser les disques » pour relancer la recherche.</span>');
+    setDetectStatus('<span class="info">' + t("detectionAgain") + '</span>');
 }
 
 function returnFromAccounts() {
@@ -887,13 +1034,13 @@ function openWindowsDrive(drive) {
     try {
         if (IsBitLockerLocked(drive)) {
             showScreen("screen-detect");
-            setDetectStatus('<span class="warn">\u26a0 Partition BitLocker verrouill\u00e9e sur ' + drive + ':\\. D\u00e9verrouillez-la avec votre cl\u00e9 de r\u00e9cup\u00e9ration, puis relancez l\'analyse.</span>');
+            setDetectStatus('<span class="warn">' + formatText("bitlockerDrive", {drive: escapeHtml(drive)}) + '</span>');
             return;
         }
-        setDetectStatus('<span class="found">\u2713 Windows trouv\u00e9 sur ' + drive + ':\\</span>');
+        setDetectStatus('<span class="found">' + formatText("windowsFound", {drive: escapeHtml(drive)}) + '</span>');
         loadAccounts(drive);
     } catch (e) {
-        setDetectStatus('<span class="error">\u2717 Erreur : ' + e.message + '</span>');
+        setDetectStatus('<span class="error">' + formatText("operationError", {error: escapeHtml(e.message)}) + '</span>');
     }
 }
 
@@ -909,11 +1056,11 @@ function loadAccounts(drive) {
         }
         if (accounts.length === 0) {
             if (detectedWindowsDrives.length > 1) {
-                showWindowsError("Aucun compte local personnel trouv\u00e9 sur " + drive + ":\\. S\u00e9lectionnez une autre installation Windows.");
+                showWindowsError(formatText("noAccounts", {drive: escapeHtml(drive)}));
                 showScreen("screen-windows");
             } else {
                 showScreen("screen-detect");
-                setDetectStatus('<span class="warn">\u26a0 Aucun compte local personnel trouv\u00e9 sur ' + drive + ':\\</span>');
+                setDetectStatus('<span class="warn">' + formatText("noAccountsSingle", {drive: escapeHtml(drive)}) + '</span>');
             }
             return;
         }
@@ -921,7 +1068,7 @@ function loadAccounts(drive) {
         renderAccounts();
         showScreen("screen-accounts");
     } catch (e) {
-        setDetectStatus('<span class="error">\u2717 SAM illisible : ' + e.message + '</span>');
+        setDetectStatus('<span class="error">' + formatText("samUnreadable", {error: escapeHtml(e.message)}) + '</span>');
     }
 }
 
@@ -958,7 +1105,7 @@ function confirmReset() {
             var err = document.createElement("div");
             err.id = "no-account-error";
             err.className = "inline-error";
-            err.textContent = "\u26a0 Veuillez s\u00e9lectionner un compte avant de continuer.";
+            err.textContent = t("invalidSelection");
             byId("btn-reset").parentNode.insertBefore(err, byId("btn-reset").nextSibling);
         }
         return;
@@ -969,15 +1116,15 @@ function confirmReset() {
             var err = document.createElement("div");
             err.id = "no-account-error";
             err.className = "inline-error";
-            err.textContent = "\u26a0 Nom de compte invalide. Selectionnez un autre compte.";
+            err.textContent = t("invalidAccount");
             byId("btn-reset").parentNode.insertBefore(err, byId("btn-reset").nextSibling);
         }
         return;
     }
     byId("confirm-account").innerHTML = "&#128100; " + escapeHtml(selectedAccount);
     byId("confirm-type").innerHTML = isBuiltinAdmin(selectedAccount)
-        ? "Administrateur int\u00e9gr\u00e9"
-        : "Compte Windows \u2014 " + windowsDrive + ":\\Windows";
+        ? t("builtinAdmin")
+        : t("windowsAccount") + " \u2014 " + windowsDrive + ":\\Windows";
     showScreen("screen-confirm");
 }
 
@@ -1002,7 +1149,7 @@ function writeTextFile(path, content) {
 
 function executeReset() {
     showScreen("screen-result");
-    byId("result-status").innerHTML = '<div class="label">Op\u00e9ration en cours</div><span class="spinner"></span> Application des modifications...';
+    byId("result-status").innerHTML = '<div class="label">' + t("operationInProgress") + '</div><span class="spinner"></span> ' + t("applyingChanges");
     byId("result-steps").innerHTML = "";
     byId("btn-reboot").className = "btn btn-primary hidden";
     try {
@@ -1036,7 +1183,7 @@ function executeReset() {
             "echo Script de recuperation introuvable.\r\n" +
             "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
             "pause\r\n");
-        steps.push("\u2713 Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
+        steps.push(t("scriptGenerated"));
 
         var aclCmd = "icacls \"" + peFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX";
         var rAcl = RunCmd(aclCmd);
@@ -1049,8 +1196,8 @@ function executeReset() {
             renderResult(false, ["\u2717 Les permissions du dossier sont invalides (code " + rAclVerify + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9."]);
             return;
         }
-        steps.push("\u2713 Dossier des scripts verrouill\u00e9 (lecture seule pour les utilisateurs standard)");
-        steps.push("\u2713 Permissions du dossier v\u00e9rifi\u00e9es");
+        steps.push(t("scriptsLocked"));
+        steps.push(t("permissionsChecked"));
 
         var backupFolder = peFolder + "\\Backup";
         ensureFolder(backupFolder);
@@ -1076,7 +1223,7 @@ function executeReset() {
                 return;
             }
         }
-        steps.push("\u2713 Sauvegarde prot\u00e9g\u00e9e des ruches SAM, SYSTEM et SECURITY");
+        steps.push(t("backupProtected"));
 
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
         var rLoadSoftware = RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
@@ -1098,15 +1245,15 @@ function executeReset() {
         }
 
         if (rIFEO === 0) {
-            steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es (usage unique)");
+            steps.push(t("ifeoConfigured"));
             if (rOnce === 0) {
-                steps.push("\u2713 Filet IFEO : nettoyage \u00e0 la prochaine connexion");
+                steps.push(t("ifeoCleanup"));
             } else {
-                steps.push("\u26a0 Filet RunOnce non pos\u00e9 (code " + rOnce + ") \u2014 le d\u00e9clencheur reste \u00e0 usage unique");
+                steps.push(formatText("runOnceWarning", {code: rOnce}));
             }
-            steps.push("\u2713 L'ordinateur est pr\u00eat. Retirez la cl\u00e9 et red\u00e9marrez.");
+            steps.push(t("readyReboot"));
         } else {
-            steps.push("\u2717 Impossible d'injecter la cl\u00e9 IFEO (code " + rIFEO + ")");
+            steps.push(formatText("ifeoFailed", {code: rIFEO}));
             success = false;
         }
         renderResult(success, steps);
@@ -1116,20 +1263,20 @@ function executeReset() {
 }
 
 function renderResult(success, steps) {
-    byId("result-status").innerHTML = '<div class="label">R\u00e9sultat</div>' +
+    byId("result-status").innerHTML = '<div class="label">' + t("result") + '</div>' +
         (success
-            ? '<span class="found result-ok">\u2713 Pr\u00eat ! Suivez les \u00e9tapes ci-dessous.</span><br><span class="info">\u2713 Permissions du dossier v\u00e9rifi\u00e9es</span>'
-            : '<span class="error result-fail">\u2717 Op\u00e9ration \u00e9chou\u00e9e</span><br>' + steps[steps.length - 1]);
+            ? '<span class="found result-ok">' + t("readySteps") + '</span><br><span class="info">' + t("permissionsVerified") + '</span>'
+            : '<span class="error result-fail">' + t("operationFailed") + '</span><br>' + steps[steps.length - 1]);
 
     if (success) {
         byId("btn-reboot").className = "btn btn-primary";
         byId("result-steps").innerHTML =
-            '<div class="step-title step-title-lg">Prochaines \u00e9tapes</div>' +
+            '<div class="step-title step-title-lg">' + t("nextSteps") + '</div>' +
             '<div class="next-steps">' +
-            '<div>1. \uD83D\uDD0C Retirez la cl\u00e9 USB</div>' +
-            '<div>2. \uD83D\uDD04 Red\u00e9marrez le PC</div>' +
-            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong class="hl">5x sur Maj</strong> (une seule fois)</div>' +
-            '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran \u2014 le d\u00e9clencheur SYSTEM est retir\u00e9 d\u00e8s l\'ouverture</div>' +
+            '<div>1. ' + t("removeUsb") + '</div>' +
+            '<div>2. ' + t("restartPc") + '</div>' +
+            '<div>3. ' + t("shiftInstruction") + '</div>' +
+            '<div>4. ' + t("triggerInstruction") + '</div>' +
             '</div>';
     } else {
         byId("btn-reboot").className = "btn btn-primary hidden";
@@ -1140,7 +1287,7 @@ function renderResult(success, steps) {
 function reboot() {
     var shell = new ActiveXObject("WScript.Shell");
     shell.Run("cmd.exe /c shutdown /r /t 5 || wpeutil reboot", 0, false);
-    byId("result-status").innerHTML = '<div class="label">Red\u00e9marrage</div><span class="info">\u21ba Red\u00e9marrage en cours...</span>';
+    byId("result-status").innerHTML = '<div class="label">' + t("restarting") + '</div><span class="info">' + t("restartInProgress") + '</span>';
 }
 </script>
 
