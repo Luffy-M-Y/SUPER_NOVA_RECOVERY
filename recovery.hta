@@ -57,6 +57,17 @@ body {
     box-shadow: 0 12px 35px rgba(0,0,0,0.35);
     overflow-y: auto;
 }
+.policy-box {
+    background: #282828;
+    border: 1px solid #3d3d3d;
+    border-radius: 7px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 1.55;
+}
+.policy-box p { margin: 0 0 10px; }
+.policy-box p:last-child { margin-bottom: 0; }
 
 .logo { text-align: center; margin-bottom: 30px; }
 .logo h1 {
@@ -186,15 +197,16 @@ body {
 
 .spinner {
     display: inline-block;
-    width: 14px; height: 14px;
-    border: 2px solid #3a3a3a;
-    border-top-color: #5b8def;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    width: 18px; height: 18px;
+    line-height: 18px;
+    color: #5b8def;
+    font-family: 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif;
+    font-size: 17px;
+    font-weight: normal;
     vertical-align: middle;
     margin-right: 8px;
+    text-align: center;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 .section-title {
     font-size: 10px;
@@ -218,7 +230,27 @@ body {
         </select>
     </div>
 
-    <div id="screen-detect" class="screen active">
+    <div id="screen-policy" class="screen active">
+        <div class="section-title" data-i18n="privacyTitle">Politique de confidentialité</div>
+        <div class="policy-box">
+            <p data-i18n="privacyIntro">SUPER NOVA RECOVERY est un outil hors ligne de récupération Windows.</p>
+            <p data-i18n="privacyData">Aucune donnée, aucun mot de passe et aucune clé BitLocker ne sont envoyés sur Internet.</p>
+            <p data-i18n="privacyProcessing">L’outil analyse et modifie uniquement les volumes Windows que vous sélectionnez. Des fichiers temporaires et une sauvegarde protégée des ruches système peuvent être créés pendant l’opération, puis supprimés après son achèvement.</p>
+            <p data-i18n="privacyResponsibility">Utilisez cet outil uniquement sur une machine et des données pour lesquels vous êtes autorisé. En continuant, vous acceptez ces conditions et comprenez que l’opération modifie des fichiers système.</p>
+        </div>
+        <button class="btn btn-primary" onclick="acceptPolicy()"><span data-i18n="acceptPolicy">J’accepte et je continue</span></button>
+        <button class="btn btn-ghost" onclick="refusePolicy()"><span data-i18n="refusePolicy">Je refuse</span></button>
+    </div>
+
+    <div id="screen-policy-refused" class="screen">
+        <div class="warning-box">
+            <span data-i18n="policyRefused">Vous avez refusé la politique de confidentialité. L’analyse des partitions est bloquée.</span>
+        </div>
+        <button class="btn btn-danger" onclick="quitApplication()"><span data-i18n="quit">Quitter</span></button>
+        <button class="btn btn-ghost" onclick="returnToPolicy()"><span data-i18n="continuePolicy">Continuer vers la politique</span></button>
+    </div>
+
+    <div id="screen-detect" class="screen">
         <div class="status-box">
             <div class="label" data-i18n="detectionStatus">Statut de détection</div>
             <div id="detect-status" class="info" data-i18n="searching">
@@ -737,10 +769,23 @@ var windowsDrive = "";
 var selectedWindowsDrive = "";
 var detectedWindowsDrives = [];
 var accounts = [];
-var screenIds = ["screen-detect", "screen-windows", "screen-accounts", "screen-confirm", "screen-result"];
+var spinnerTimer = null;
+var spinnerFrame = 0;
+var spinnerFrames = ["◐", "◓", "◑", "◒"];
+var screenIds = ["screen-policy", "screen-policy-refused", "screen-detect", "screen-windows", "screen-accounts", "screen-confirm", "screen-result"];
 var currentLanguage = "fr";
 var translations = {
     fr: {
+        privacyTitle: "Politique de confidentialité",
+        privacyIntro: "SUPER NOVA RECOVERY est un outil hors ligne de récupération Windows.",
+        privacyData: "Aucune donnée, aucun mot de passe et aucune clé BitLocker ne sont envoyés sur Internet.",
+        privacyProcessing: "L’outil analyse et modifie uniquement les volumes Windows que vous sélectionnez. Des fichiers temporaires et une sauvegarde protégée des ruches système peuvent être créés pendant l’opération, puis supprimés après son achèvement.",
+        privacyResponsibility: "Utilisez cet outil uniquement sur une machine et des données pour lesquels vous êtes autorisé. En continuant, vous acceptez ces conditions et comprenez que l’opération modifie des fichiers système.",
+        acceptPolicy: "J’accepte et je continue",
+        refusePolicy: "Je refuse",
+        policyRefused: "Vous avez refusé la politique de confidentialité. L’analyse des partitions est bloquée.",
+        quit: "Quitter",
+        continuePolicy: "Continuer vers la politique",
         subtitle: "Réinitialisation de mot de passe Windows",
         detectionStatus: "Statut de détection",
         searching: '<span class="spinner"></span> Recherche de la partition Windows...',
@@ -797,6 +842,16 @@ var translations = {
         ifeoFailed: "✗ Impossible d'injecter la clé IFEO (code {code})"
     },
     en: {
+        privacyTitle: "Privacy policy",
+        privacyIntro: "SUPER NOVA RECOVERY is an offline Windows recovery tool.",
+        privacyData: "No data, password or BitLocker key is sent over the Internet.",
+        privacyProcessing: "The tool only analyzes and modifies the Windows volumes you select. Temporary files and a protected backup of system hives may be created during the operation and removed when it is complete.",
+        privacyResponsibility: "Use this tool only on a machine and data you are authorized to access. By continuing, you accept these terms and understand that the operation modifies system files.",
+        acceptPolicy: "I accept and continue",
+        refusePolicy: "I refuse",
+        policyRefused: "You refused the privacy policy. Partition analysis is blocked.",
+        quit: "Quit",
+        continuePolicy: "Return to the policy",
         subtitle: "Windows password reset",
         detectionStatus: "Detection status",
         searching: '<span class="spinner"></span> Searching for a Windows partition...',
@@ -927,6 +982,53 @@ function showScreen(id) {
 
 function setDetectStatus(html) {
     byId("detect-status").innerHTML = html;
+    if (html.indexOf('class="spinner"') >= 0) {
+        startSpinner();
+    } else {
+        stopSpinner();
+    }
+}
+
+function updateSpinnerFrames() {
+    var nodes = document.getElementsByTagName("span");
+    var frame = spinnerFrames[spinnerFrame % spinnerFrames.length];
+    for (var i = 0; i < nodes.length; i++) {
+        if ((" " + nodes[i].className + " ").indexOf(" spinner ") >= 0) {
+            nodes[i].innerText = frame;
+        }
+    }
+    spinnerFrame++;
+}
+
+function startSpinner() {
+    stopSpinner();
+    spinnerFrame = 0;
+    updateSpinnerFrames();
+    spinnerTimer = window.setInterval(updateSpinnerFrames, 140);
+}
+
+function stopSpinner() {
+    if (spinnerTimer !== null) {
+        window.clearInterval(spinnerTimer);
+        spinnerTimer = null;
+    }
+}
+
+function acceptPolicy() {
+    showScreen("screen-detect");
+    setTimeout(detectWindows, 100);
+}
+
+function refusePolicy() {
+    showScreen("screen-policy-refused");
+}
+
+function returnToPolicy() {
+    showScreen("screen-policy");
+}
+
+function quitApplication() {
+    window.close();
 }
 
 window.onload = function() {
@@ -940,7 +1042,6 @@ window.onload = function() {
     byId("app").style.maxHeight = Math.round(h * 0.88) + "px";
     byId("accounts-list").style.maxHeight = Math.round(h * 0.30) + "px";
     setLanguage(currentLanguage);
-    setTimeout(detectWindows, 500);
 };
 
 function detectWindows() {
@@ -1147,122 +1248,164 @@ function writeTextFile(path, content) {
     file.Close();
 }
 
+function runCommandAsync(cmd, callback) {
+    var shell, exec;
+    try {
+        shell = new ActiveXObject("WScript.Shell");
+        exec = shell.Exec("cmd.exe /c " + cmd);
+    } catch (e) {
+        callback(-1, e);
+        return;
+    }
+    function poll() {
+        if (exec.Status === 0) {
+            window.setTimeout(poll, 50);
+        } else {
+            callback(exec.ExitCode, null);
+        }
+    }
+    window.setTimeout(poll, 20);
+}
+
 function executeReset() {
     showScreen("screen-result");
     byId("result-status").innerHTML = '<div class="label">' + t("operationInProgress") + '</div><span class="spinner"></span> ' + t("applyingChanges");
     byId("result-steps").innerHTML = "";
     byId("btn-reboot").className = "btn btn-primary hidden";
-    try {
-        if (!isSafeAccountName(selectedAccount)) {
-            renderResult(false, ["\u2717 Nom de compte invalide."]);
-            return;
-        }
-        var peFolder = windowsDrive + ":\\SuperNova";
-        var bootFolder = "C:\\SuperNova";
-        var steps = [];
-        var success = true;
-
-        ensureFolder(peFolder);
-        writeTextFile(peFolder + "\\recovery_script.bat", fillTemplate("tpl-recovery-script", selectedAccount, bootFolder));
-        writeTextFile(peFolder + "\\CopyData.bat", fillTemplate("tpl-copy-data", selectedAccount, bootFolder));
-        writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
-        writeTextFile(peFolder + "\\ifeo_launch.bat",
-            "@echo off\r\n" +
-            "set \"SN_LOG=%SystemDrive%\\SuperNova_IFEO_debug.log\"\r\n" +
-            "> \"%SN_LOG%\" echo ==== SUPER NOVA IFEO %DATE% %TIME% ====\r\n" +
-            ">> \"%SN_LOG%\" echo Lanceur demarre sous %USERNAME%.\r\n" +
-            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            ">> \"%SN_LOG%\" echo Declencheur IFEO retire.\r\n" +
-            "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
-            ">> \"%SN_LOG%\" echo Lancement de recovery_script.bat dans la console partagee.\r\n" +
-            "start \"\" /b cmd.exe /d /k call \"%~dp0recovery_script.bat\"\r\n" +
-            ">> \"%SN_LOG%\" echo Console de recuperation lancee.\r\n" +
-            "exit\r\n" +
-            ":MISSING\r\n" +
-            ">> \"%SN_LOG%\" echo ERREUR: recovery_script.bat introuvable.\r\n" +
-            "echo Script de recuperation introuvable.\r\n" +
-            "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
-            "pause\r\n");
-        steps.push(t("scriptGenerated"));
-
-        var aclCmd = "icacls \"" + peFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX";
-        var rAcl = RunCmd(aclCmd);
-        if (rAcl !== 0) {
-            renderResult(false, ["\u2717 Impossible de prot\u00e9ger le dossier des scripts (code " + rAcl + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9."]);
-            return;
-        }
-        var rAclVerify = RunCmd("icacls \"" + peFolder + "\" /verify");
-        if (rAclVerify !== 0) {
-            renderResult(false, ["\u2717 Les permissions du dossier sont invalides (code " + rAclVerify + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9."]);
-            return;
-        }
-        steps.push(t("scriptsLocked"));
-        steps.push(t("permissionsChecked"));
-
-        var backupFolder = peFolder + "\\Backup";
-        ensureFolder(backupFolder);
-        var backupAclCmd = "icacls \"" + backupFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F";
-        var rBackupAcl = RunCmd(backupAclCmd);
-        if (rBackupAcl !== 0) {
-            renderResult(false, ["\u2717 Impossible de prot\u00e9ger la sauvegarde des ruches (code " + rBackupAcl + "). L'op\u00e9ration est interrompue."]);
-            return;
-        }
-        var rBackupVerify = RunCmd("icacls \"" + backupFolder + "\" /verify");
-        if (rBackupVerify !== 0) {
-            renderResult(false, ["\u2717 Les permissions de la sauvegarde sont invalides (code " + rBackupVerify + "). L'op\u00e9ration est interrompue."]);
-            return;
-        }
-        var hives = ["SAM", "SYSTEM", "SECURITY"];
-        for (var h = 0; h < hives.length; h++) {
-            var hive = hives[h];
-            var sourceHive = windowsDrive + ":\\Windows\\System32\\config\\" + hive;
-            var targetHive = backupFolder + "\\" + hive;
-            var rBackup = RunCmd("copy /Y \"" + sourceHive + "\" \"" + targetHive + "\"");
-            if (rBackup !== 0) {
-                renderResult(false, ["\u2717 Sauvegarde de la ruche " + hive + " impossible (code " + rBackup + "). L'op\u00e9ration est interrompue avant toute modification."]);
+    startSpinner();
+    setTimeout(function() {
+        try {
+            if (!isSafeAccountName(selectedAccount)) {
+                renderResult(false, ["\u2717 Nom de compte invalide."]);
                 return;
             }
-        }
-        steps.push(t("backupProtected"));
+            var peFolder = windowsDrive + ":\\SuperNova";
+            var bootFolder = "C:\\SuperNova";
+            var steps = [];
 
-        RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
-        var rLoadSoftware = RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
-        if (rLoadSoftware !== 0) {
-            renderResult(false, ["\u2717 Impossible de charger le registre SOFTWARE (code " + rLoadSoftware + "). Aucune modification n'a \u00e9t\u00e9 appliqu\u00e9e."]);
-            return;
-        }
-        var launchPath = bootFolder + "\\ifeo_launch.bat";
-        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /d /k " + launchPath + "\" /f";
-        var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
-        var rIFEO = RunCmd(ifeoCmd);
-        var rOnce = RunCmd(runOnceCmd);
-        var rUnloadSoftware = RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
-        if (rUnloadSoftware !== 0) {
-            RunCmd("reg delete \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f");
-            rUnloadSoftware = RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
-            renderResult(false, ["\u2717 Impossible de d\u00e9charger le registre SOFTWARE (code " + rUnloadSoftware + "). Red\u00e9marrez sans utiliser le d\u00e9clencheur et v\u00e9rifiez le disque."]);
-            return;
-        }
+            ensureFolder(peFolder);
+            writeTextFile(peFolder + "\\recovery_script.bat", fillTemplate("tpl-recovery-script", selectedAccount, bootFolder));
+            writeTextFile(peFolder + "\\CopyData.bat", fillTemplate("tpl-copy-data", selectedAccount, bootFolder));
+            writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
+            writeTextFile(peFolder + "\\ifeo_launch.bat",
+                "@echo off\r\n" +
+                "set \"SN_LOG=%SystemDrive%\\SuperNova_IFEO_debug.log\"\r\n" +
+                "> \"%SN_LOG%\" echo ==== SUPER NOVA IFEO %DATE% %TIME% ====\r\n" +
+                ">> \"%SN_LOG%\" echo Lanceur demarre sous %USERNAME%.\r\n" +
+                "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+                ">> \"%SN_LOG%\" echo Declencheur IFEO retire.\r\n" +
+                "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
+                ">> \"%SN_LOG%\" echo Lancement de recovery_script.bat dans la console partagee.\r\n" +
+                "start \"\" /b cmd.exe /d /k call \"%~dp0recovery_script.bat\"\r\n" +
+                ">> \"%SN_LOG%\" echo Console de recuperation lancee.\r\n" +
+                "exit\r\n" +
+                ":MISSING\r\n" +
+                ">> \"%SN_LOG%\" echo ERREUR: recovery_script.bat introuvable.\r\n" +
+                "echo Script de recuperation introuvable.\r\n" +
+                "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
+                "pause\r\n");
+            steps.push(t("scriptGenerated"));
 
-        if (rIFEO === 0) {
-            steps.push(t("ifeoConfigured"));
-            if (rOnce === 0) {
-                steps.push(t("ifeoCleanup"));
-            } else {
-                steps.push(formatText("runOnceWarning", {code: rOnce}));
+            var aclCmd = "icacls \"" + peFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX";
+            var backupFolder = peFolder + "\\Backup";
+            var backupAclCmd = "icacls \"" + backupFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F";
+            var hives = ["SAM", "SYSTEM", "SECURITY"];
+
+            function fail(message) {
+                renderResult(false, [message]);
             }
-            steps.push(t("readyReboot"));
-        } else {
-            steps.push(formatText("ifeoFailed", {code: rIFEO}));
-            success = false;
+            function checked(cmd, onSuccess, message) {
+                runCommandAsync(cmd, function(code) {
+                    if (code !== 0) {
+                        fail(message(code));
+                    } else {
+                        onSuccess();
+                    }
+                });
+            }
+
+            checked(aclCmd, function() {
+                checked("icacls \"" + peFolder + "\" /verify", function() {
+                    steps.push(t("scriptsLocked"));
+                    steps.push(t("permissionsChecked"));
+                    ensureFolder(backupFolder);
+                    checked(backupAclCmd, function() {
+                        checked("icacls \"" + backupFolder + "\" /verify", function() {
+                            var backupHive = function(index) {
+                                if (index >= hives.length) {
+                                    steps.push(t("backupProtected"));
+                                    runCommandAsync("reg unload HKLM\\OFFLINE_SOFTWARE", function() {
+                                        runCommandAsync("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"", loadSoftware);
+                                    });
+                                    return;
+                                }
+                                var hive = hives[index];
+                                var sourceHive = windowsDrive + ":\\Windows\\System32\\config\\" + hive;
+                                var targetHive = backupFolder + "\\" + hive;
+                                checked("copy /Y \"" + sourceHive + "\" \"" + targetHive + "\"", function() {
+                                    backupHive(index + 1);
+                                }, function(code) {
+                                    return "\u2717 Sauvegarde de la ruche " + hive + " impossible (code " + code + "). L'op\u00e9ration est interrompue avant toute modification.";
+                                });
+                            };
+                            backupHive(0);
+                        }, function(code) {
+                            return "\u2717 Les permissions de la sauvegarde sont invalides (code " + code + "). L'op\u00e9ration est interrompue.";
+                        });
+                    }, function(code) {
+                        return "\u2717 Impossible de prot\u00e9ger la sauvegarde des ruches (code " + code + "). L'op\u00e9ration est interrompue.";
+                    });
+                }, function(code) {
+                    return "\u2717 Les permissions du dossier sont invalides (code " + code + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9.";
+                });
+            }, function(code) {
+                return "\u2717 Impossible de prot\u00e9ger le dossier des scripts (code " + code + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9.";
+            });
+
+            function loadSoftware(rLoadSoftware) {
+                if (rLoadSoftware !== 0) {
+                    fail("\u2717 Impossible de charger le registre SOFTWARE (code " + rLoadSoftware + "). Aucune modification n'a \u00e9t\u00e9 appliqu\u00e9e.");
+                    return;
+                }
+                var launchPath = bootFolder + "\\ifeo_launch.bat";
+                var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /d /k " + launchPath + "\" /f";
+                var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
+                runCommandAsync(ifeoCmd, function(rIFEO) {
+                    runCommandAsync(runOnceCmd, function(rOnce) {
+                        runCommandAsync("reg unload HKLM\\OFFLINE_SOFTWARE", function(rUnloadSoftware) {
+                            if (rUnloadSoftware !== 0) {
+                                runCommandAsync("reg delete \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f", function() {
+                                    runCommandAsync("reg unload HKLM\\OFFLINE_SOFTWARE", function(retryUnload) {
+                                        fail("\u2717 Impossible de d\u00e9charger le registre SOFTWARE (code " + retryUnload + "). Red\u00e9marrez sans utiliser le d\u00e9clencheur et v\u00e9rifiez le disque.");
+                                    });
+                                });
+                                return;
+                            }
+                            if (rIFEO === 0) {
+                                steps.push(t("ifeoConfigured"));
+                                if (rOnce === 0) {
+                                    steps.push(t("ifeoCleanup"));
+                                } else {
+                                    steps.push(formatText("runOnceWarning", {code: rOnce}));
+                                }
+                                steps.push(t("readyReboot"));
+                                renderResult(true, steps);
+                            } else {
+                                steps.push(formatText("ifeoFailed", {code: rIFEO}));
+                                renderResult(false, steps);
+                            }
+                        });
+                    });
+                });
+            }
+        } catch (e) {
+            renderResult(false, ["\u2717 Erreur JS: " + e.message]);
         }
-        renderResult(success, steps);
-    } catch (e) {
-        renderResult(false, ["\u2717 Erreur JS: " + e.message]);
-    }
+    }, 80);
 }
 
 function renderResult(success, steps) {
+    stopSpinner();
     byId("result-status").innerHTML = '<div class="label">' + t("result") + '</div>' +
         (success
             ? '<span class="found result-ok">' + t("readySteps") + '</span><br><span class="info">' + t("permissionsVerified") + '</span>'
