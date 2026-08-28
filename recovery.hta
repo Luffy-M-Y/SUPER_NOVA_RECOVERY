@@ -1045,13 +1045,23 @@ function executeReset() {
         steps.push("\u2713 Sauvegarde prot\u00e9g\u00e9e des ruches SAM, SYSTEM et SECURITY");
 
         RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
-        RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
+        var rLoadSoftware = RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
+        if (rLoadSoftware !== 0) {
+            renderResult(false, ["\u2717 Impossible de charger le registre SOFTWARE (code " + rLoadSoftware + "). Aucune modification n'a \u00e9t\u00e9 appliqu\u00e9e."]);
+            return;
+        }
         var launchPath = bootFolder + "\\ifeo_launch.bat";
         var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /d /k " + launchPath + "\" /f";
         var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
         var rIFEO = RunCmd(ifeoCmd);
         var rOnce = RunCmd(runOnceCmd);
-        RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
+        var rUnloadSoftware = RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
+        if (rUnloadSoftware !== 0) {
+            RunCmd("reg delete \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f");
+            rUnloadSoftware = RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
+            renderResult(false, ["\u2717 Impossible de d\u00e9charger le registre SOFTWARE (code " + rUnloadSoftware + "). Red\u00e9marrez sans utiliser le d\u00e9clencheur et v\u00e9rifiez le disque."]);
+            return;
+        }
 
         if (rIFEO === 0) {
             steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es (usage unique)");
