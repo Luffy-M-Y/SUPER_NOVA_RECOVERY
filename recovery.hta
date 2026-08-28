@@ -6,6 +6,7 @@
 <HTA:APPLICATION
     ID="SuperNovaRecovery"
     APPLICATIONNAME="SuperNovaRecovery"
+    ICON="SUPER_NOVA.ico"
     BORDER="thin"
     BORDERSTYLE="normal"
     CAPTION="yes"
@@ -56,6 +57,17 @@ body {
     box-shadow: 0 12px 35px rgba(0,0,0,0.35);
     overflow-y: auto;
 }
+.policy-box {
+    background: #282828;
+    border: 1px solid #3d3d3d;
+    border-radius: 7px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 1.55;
+}
+.policy-box p { margin: 0 0 10px; }
+.policy-box p:last-child { margin-bottom: 0; }
 
 .logo { text-align: center; margin-bottom: 30px; }
 .logo h1 {
@@ -70,6 +82,14 @@ body {
     color: #8f8f8f;
     margin-top: 6px;
     letter-spacing: 0.5px;
+}
+.logo select {
+    margin-top: 10px;
+    padding: 5px 8px;
+    background: #292929;
+    color: #ddd;
+    border: 1px solid #444;
+    border-radius: 3px;
 }
 
 .screen { display: none; }
@@ -177,15 +197,16 @@ body {
 
 .spinner {
     display: inline-block;
-    width: 14px; height: 14px;
-    border: 2px solid #3a3a3a;
-    border-top-color: #5b8def;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    width: 18px; height: 18px;
+    line-height: 18px;
+    color: #5b8def;
+    font-family: 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif;
+    font-size: 17px;
+    font-weight: normal;
     vertical-align: middle;
     margin-right: 8px;
+    text-align: center;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 .section-title {
     font-size: 10px;
@@ -202,48 +223,85 @@ body {
 <div id="app">
     <div class="logo">
         <h1>⚡ SUPER NOVA RECOVERY</h1>
-        <p>Réinitialisation de mot de passe Windows</p>
+        <p data-i18n="subtitle">Réinitialisation de mot de passe Windows</p>
+        <select id="language-select" onchange="setLanguage(this.value)" aria-label="Language">
+            <option value="fr" selected>Français</option>
+            <option value="en">English</option>
+        </select>
     </div>
 
-    <div id="screen-detect" class="screen active">
+    <div id="screen-policy" class="screen active">
+        <div class="section-title" data-i18n="privacyTitle">Politique de confidentialité</div>
+        <div class="policy-box">
+            <p data-i18n="privacyIntro">SUPER NOVA RECOVERY est un outil hors ligne de récupération Windows.</p>
+            <p data-i18n="privacyData">Aucune donnée, aucun mot de passe et aucune clé BitLocker ne sont envoyés sur Internet.</p>
+            <p data-i18n="privacyProcessing">L’outil analyse et modifie uniquement les volumes Windows que vous sélectionnez. Des fichiers temporaires et une sauvegarde protégée des ruches système peuvent être créés pendant l’opération, puis supprimés après son achèvement.</p>
+            <p data-i18n="privacyResponsibility">Utilisez cet outil uniquement sur une machine et des données pour lesquels vous êtes autorisé. En continuant, vous acceptez ces conditions et comprenez que l’opération modifie des fichiers système.</p>
+        </div>
+        <button class="btn btn-primary" onclick="acceptPolicy()"><span data-i18n="acceptPolicy">J’accepte et je continue</span></button>
+        <button class="btn btn-ghost" onclick="refusePolicy()"><span data-i18n="refusePolicy">Je refuse</span></button>
+    </div>
+
+    <div id="screen-policy-refused" class="screen">
+        <div class="warning-box">
+            <span data-i18n="policyRefused">Vous avez refusé la politique de confidentialité. L’analyse des partitions est bloquée.</span>
+        </div>
+        <button class="btn btn-danger" onclick="quitApplication()"><span data-i18n="quit">Quitter</span></button>
+        <button class="btn btn-ghost" onclick="returnToPolicy()"><span data-i18n="continuePolicy">Continuer vers la politique</span></button>
+    </div>
+
+    <div id="screen-detect" class="screen">
         <div class="status-box">
-            <div class="label">Statut de détection</div>
-            <div id="detect-status" class="info">
+            <div class="label" data-i18n="detectionStatus">Statut de détection</div>
+            <div id="detect-status" class="info" data-i18n="searching">
                 <span class="spinner"></span> Recherche de la partition Windows...
             </div>
         </div>
         <button class="btn btn-primary" id="btn-detect" onclick="detectWindows()">
-            Analyser les disques
+            <span data-i18n="analyzeDisks">Analyser les disques</span>
         </button>
     </div>
 
+    <div id="screen-windows" class="screen">
+        <div class="section-title" data-i18n="windowsDetected">Installations Windows détectées</div>
+        <div id="windows-list"></div>
+        <div id="windows-error" class="inline-error hidden"></div>
+        <div class="warning-box">
+            <span data-i18n="multipleWindows">⚠️ Plusieurs installations Windows ont été trouvées. Sélectionnez celle à analyser.</span>
+        </div>
+        <button class="btn btn-primary" id="btn-windows" onclick="confirmWindowsDrive()" disabled>
+            <span data-i18n="continuePartition">Continuer avec cette partition</span>
+        </button>
+        <button class="btn btn-ghost" onclick="returnToDetection()">← Retour</button>
+    </div>
+
     <div id="screen-accounts" class="screen">
-        <div class="section-title">Comptes détectés sur <span id="drive-label"></span></div>
+        <div class="section-title"><span data-i18n="accountsDetected">Comptes détectés sur</span> <span id="drive-label"></span></div>
         <div id="accounts-list"></div>
         <div class="warning-box">
-            ⚠️ Fonctionne uniquement avec les comptes locaux.<br>
-            Compte Microsoft (@outlook, @hotmail) → <strong>account.live.com</strong>
+            <span data-i18n="localOnly">⚠️ Fonctionne uniquement avec les comptes locaux.</span><br>
+            <span data-i18n="microsoftHelp">Compte Microsoft (@outlook, @hotmail) → <strong>account.live.com</strong></span>
         </div>
         <button class="btn btn-danger" id="btn-reset" onclick="confirmReset()" disabled>
-            🔑 Réinitialiser le mot de passe
+            <span data-i18n="resetPassword">🔑 Réinitialiser le mot de passe</span>
         </button>
-        <button class="btn btn-ghost" onclick="showScreen('screen-detect')">← Retour</button>
+        <button class="btn btn-ghost" onclick="returnFromAccounts()">← Retour</button>
     </div>
 
     <div id="screen-confirm" class="screen">
         <div class="status-box">
-            <div class="label">Compte sélectionné</div>
+            <div class="label" data-i18n="selectedAccount">Compte sélectionné</div>
             <div id="confirm-account" class="confirm-name"></div>
             <div id="confirm-type" class="confirm-type"></div>
         </div>
         <div class="warning-box">
-            ⚠️ Cette opération va modifier des fichiers système Windows.<br>
+            <span data-i18n="confirmWarning">⚠️ Cette opération va modifier des fichiers système Windows.<br>
             Assurez-vous d'avoir l'autorisation d'accéder à ce PC.<br>
             Le déclencheur 5× Maj est à usage unique : il est retiré dès le lancement
-            (et à la prochaine connexion si 5× Maj n'est pas utilisé).
+            (et à la prochaine connexion si 5× Maj n'est pas utilisé).</span>
         </div>
         <button class="btn btn-danger" onclick="executeReset()">
-            ✓ Confirmer la réinitialisation
+            <span data-i18n="confirmReset">✓ Confirmer la réinitialisation</span>
         </button>
         <button class="btn btn-ghost" onclick="showScreen('screen-accounts')">← Annuler</button>
     </div>
@@ -251,8 +309,8 @@ body {
     <div id="screen-result" class="screen">
         <div class="status-box" id="result-status"></div>
         <div class="steps" id="result-steps"></div>
-        <button class="btn btn-primary hidden" id="btn-reboot" onclick="reboot()">↺ Redémarrer le PC</button>
-        <button class="btn btn-ghost" onclick="showScreen('screen-detect')">Recommencer</button>
+        <button class="btn btn-primary hidden" id="btn-reboot" onclick="reboot()"><span data-i18n="reboot">↺ Redémarrer le PC</span></button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-detect')"><span data-i18n="restartAnalysis">Recommencer</span></button>
     </div>
 </div>
 </div>
@@ -271,22 +329,29 @@ echo.
 echo Compte cible : {{ACCOUNT}}
 echo.
 :ASK_PWD
-set "newpwd="
-set /p newpwd="Entrez le nouveau mot de passe : "
-if "%newpwd%"=="" (
-    echo [ERREUR] Le mot de passe ne peut pas etre vide.
-    goto :ASK_PWD
-)
+echo Entrez le nouveau mot de passe. Windows vous demandera une confirmation masquee.
 echo.
-net user "{{ACCOUNT}}" "%newpwd%"
+net user "{{ACCOUNT}}" *
 if %ERRORLEVEL% EQU 0 goto :SUCCESS
-goto :MS_ACCOUNT
+echo.
+echo [ERREUR] Les mots de passe ne correspondent pas, sont invalides, ou le compte est Microsoft.
+echo 1 - Recommencer la saisie
+echo 2 - Compte Microsoft (recuperer mes donnees)
+set "pwdChoice="
+set /p pwdChoice="Choix : "
+if /I "%pwdChoice%"=="2" goto :MS_ACCOUNT
+goto :ASK_PWD
 
 :SUCCESS
 echo.
 echo [SUCCES] Le mot de passe a ete reinitialise !
 echo Finalisation en cours...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe" /v Debugger /f >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
+del "{{SN_FOLDER}}\CopyData.bat" >nul 2>&amp;1
+del "{{SN_FOLDER}}\NettoyageFinal.bat" >nul 2>&amp;1
+del "{{SN_FOLDER}}\ifeo_launch.bat" >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo L'ordinateur va redemarrer dans 10 secondes pour appliquer les changements.
 shutdown /r /t 10
 pause
@@ -317,20 +382,15 @@ echo Avant de creer le compte SuperNovaAdmin,
 echo definissez un mot de passe obligatoire.
 echo Notez-le : il servira a la connexion apres redemarrage.
 :SN_ADMIN_PWD
-set "snAdminPass="
-set /p snAdminPass="Mot de passe SuperNovaAdmin : "
-if "%snAdminPass%"=="" (
-    echo [ERREUR] Le mot de passe ne peut pas etre vide.
-    goto :SN_ADMIN_PWD
-)
 echo.
 echo Creation du compte SuperNovaAdmin...
-net user SuperNovaAdmin "%snAdminPass%" /add >nul 2>&amp;1
+net user SuperNovaAdmin >nul 2>&amp;1
+if not errorlevel 1 goto :SN_ADMIN_EXISTS
+net user SuperNovaAdmin * /add
 if errorlevel 1 (
-    echo [ERREUR] Creation impossible. Choisissez un mot de passe plus complexe.
+    echo [ERREUR] Creation impossible. Le mot de passe ne respecte peut-etre pas la politique Windows.
     goto :SN_ADMIN_PWD
 )
-set "snAdminPass="
 net localgroup Administrateurs SuperNovaAdmin /add >nul 2>&amp;1
 net localgroup Administrators SuperNovaAdmin /add >nul 2>&amp;1
 echo [OK] Compte SuperNovaAdmin cree avec succes.
@@ -356,6 +416,14 @@ echo Redemarrage dans 15 secondes...
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
 goto :CLEANUP
+
+:SN_ADMIN_EXISTS
+echo.
+echo [ERREUR] Le compte SuperNovaAdmin existe deja.
+echo Aucun mot de passe n'a ete modifie pour proteger ce compte existant.
+echo Utilisez ce compte s'il est deja connu, ou supprimez-le avant de relancer cette operation.
+pause
+goto :QUIT
 
 :QUIT
 echo.
@@ -389,10 +457,15 @@ echo Copie de vos fichiers en cours...
 echo.
 mkdir "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" 2>nul
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Desktop" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Documents" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Pictures" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Downloads" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Videos" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 echo.
 echo =========================================
 echo  COPIE TERMINEE !
@@ -419,18 +492,14 @@ goto :END_SCRIPT
 :CREATE_ACCOUNT
 echo.
 set "newUser="
-set "newPass="
-set /p newUser="Nom du nouveau compte : "
-if "%newUser%"=="" (
-    echo [ERREUR] Le nom de compte ne peut pas etre vide.
+set /p "newUser=Nom du nouveau compte : "
+powershell -NoProfile -Command "$u=$env:newUser; if ($u -notmatch '^[A-Za-z0-9._-]{1,20}$') { exit 1 }"
+if errorlevel 1 (
+    echo [ERREUR] Nom invalide. Utilisez 1 a 20 caracteres : lettres, chiffres, point, tiret ou underscore.
     goto :CREATE_ACCOUNT
 )
-set /p newPass="Mot de passe (Notez-le bien !) : "
-if "%newPass%"=="" (
-    echo [ERREUR] Le mot de passe ne peut pas etre vide.
-    goto :CREATE_ACCOUNT
-)
-net user "%newUser%" "%newPass%" /add >nul 2>&amp;1
+echo Entrez le mot de passe. Windows demandera une confirmation masquee.
+net user "%newUser%" * /add
 if errorlevel 1 (
     echo [ERREUR] Creation impossible. Verifiez le nom et la complexite du mot de passe.
     goto :CREATE_ACCOUNT
@@ -461,25 +530,40 @@ echo.
 echo Vous avez choisi de garder le compte SuperNovaAdmin.
 echo Transfert des donnees vers vos dossiers personnels...
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
+set "_self=%~f0"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%_self%\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo Le PC va redemarrer dans 15 secondes...
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-set "_self=%~f0"
-reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%_self%\"" /f >nul 2>&amp;1
 pause
 exit
 
 :END_SCRIPT
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
+
+:COPY_ERROR
+echo.
+echo [ERREUR] La copie des donnees a echoue (code Robocopy 8 ou superieur).
+echo La sauvegarde est conservee. Corrigez le probleme puis relancez l'outil.
+pause
+goto :END_SCRIPT
 </textarea>
 <textarea id="tpl-nettoyage">@echo off
 color 0F
@@ -504,10 +588,15 @@ goto :SKIP_CLEAN
 echo.
 echo Transfert des donnees vers votre nouveau compte...
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
@@ -516,6 +605,10 @@ net user SuperNovaAdmin /delete >nul 2>&amp;1
 rd /s /q "{{WIN_DRIVE}}:\Users\SuperNovaAdmin" >nul 2>&amp;1
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo.
 echo [OK] Compte SuperNovaAdmin supprime avec succes !
 echo.
@@ -525,35 +618,48 @@ echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 del "%public%\Desktop\CopyData.bat" >nul 2>&amp;1
 timeout /t 14 /nobreak >nul
-reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
 :SKIP_CLEAN
 echo.
 echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin.
 echo Transfert des donnees vers le compte SuperNovaAdmin...
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
 echo Le compte SuperNovaAdmin a deja un mot de passe.
 echo Saisissez-le a nouveau, ou choisissez-en un autre.
 :PWD_LOOP2
-set "adminPass="
-set /p adminPass="Mot de passe SuperNovaAdmin : "
-if "%adminPass%"=="" goto :PWD_LOOP2
-net user SuperNovaAdmin "%adminPass%" >nul 2>&amp;1
+echo Entrez le nouveau mot de passe. Windows demandera une confirmation masquee.
+net user SuperNovaAdmin *
+if errorlevel 1 goto :PWD_LOOP2
 echo [OK] Mot de passe enregistre.
 echo.
 rd /s /q "{{WIN_DRIVE}}:\ProgramData\SuperNova" >nul 2>&amp;1
 del "{{WIN_DRIVE}}:\Users\Default\Desktop\NettoyageFinal.bat" >nul 2>&amp;1
+del "%SystemDrive%\SuperNova_IFEO_debug.log" >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupFolder /t REG_SZ /d "cmd.exe /c rd /s /q {{SN_FOLDER}}" /f >nul 2>&amp;1
+start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
-reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupNettoyage /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
+exit
+
+:COPY_ERROR
+echo.
+echo [ERREUR] Le transfert des donnees a echoue (code Robocopy 8 ou superieur).
+echo La sauvegarde est conservee. Corrigez le probleme puis relancez NettoyageFinal.
+pause
 exit
 </textarea>
 </div>
@@ -578,16 +684,19 @@ Function FileExists(path)
     FileExists = fso.FileExists(path)
 End Function
 
-Function FindWindowsDrive()
-    Dim drives, d
-    drives = Array("C", "D", "E", "F", "G", "H", "I")
-    For Each d In drives
-        If FileExists(d & ":\Windows\System32\config\SAM") Then
-            FindWindowsDrive = d
-            Exit Function
+Function FindWindowsDrives()
+    Dim d, code, candidates, shell, peDrive
+    candidates = ""
+    Set shell = CreateObject("WScript.Shell")
+    peDrive = UCase(Left(shell.ExpandEnvironmentStrings("%SystemDrive%"), 1))
+    For code = Asc("C") To Asc("Z")
+        d = Chr(code)
+        If d <> peDrive And FileExists(d & ":\Windows\System32\config\SAM") Then
+            If candidates <> "" Then candidates = candidates & "|"
+            candidates = candidates & d
         End If
     Next
-    FindWindowsDrive = ""
+    FindWindowsDrives = candidates
 End Function
 
 Function GetAccounts(winDrive)
@@ -621,23 +730,203 @@ Function GetAccounts(winDrive)
     End If
 End Function
 
-Function IsBitLockerActive(winDrive)
-    Dim output
-    output = RunCmdOutput("manage-bde -status " & winDrive & ":")
-    IsBitLockerActive = (InStr(output, "Protection On") > 0)
+Function IsBitLockerLocked(winDrive)
+    Dim output, normalized
+    output = RunCmdOutput("manage-bde -status " & winDrive & ": 2>&1")
+    normalized = LCase(output)
+    IsBitLockerLocked = (InStr(normalized, "lock status: locked") > 0) _
+        Or (InStr(normalized, "lock status : locked") > 0) _
+        Or (InStr(normalized, "verrouillage : verrouillé") > 0) _
+        Or (InStr(normalized, "verrouillage: verrouillé") > 0) _
+        Or (InStr(normalized, "verrouillage : verrouille") > 0) _
+        Or (InStr(normalized, "verrouillage: verrouille") > 0)
+End Function
+
+Function FindLockedBitLockerDrives()
+    Dim d, code, result, shell, peDrive
+    result = ""
+    Set shell = CreateObject("WScript.Shell")
+    peDrive = UCase(Left(shell.ExpandEnvironmentStrings("%SystemDrive%"), 1))
+    For code = Asc("C") To Asc("Z")
+        d = Chr(code)
+        If d <> peDrive And IsBitLockerLocked(d) Then
+            If result <> "" Then result = result & "|"
+            result = result & d
+        End If
+    Next
+    FindLockedBitLockerDrives = result
 End Function
 </script>
 
 <script language="JavaScript">
 window.onerror = function(msg, url, line) {
-    setDetectStatus('<span class="error">✗ ERREUR CRITIQUE : ' + msg + ' (ligne ' + line + ')</span>');
+    setDetectStatus('<span class="error">' + formatText("criticalError", {error: escapeHtml(msg), line: line}) + '</span>');
     return true;
 };
 
 var selectedAccount = "";
 var windowsDrive = "";
+var selectedWindowsDrive = "";
+var detectedWindowsDrives = [];
 var accounts = [];
-var screenIds = ["screen-detect", "screen-accounts", "screen-confirm", "screen-result"];
+var spinnerTimer = null;
+var spinnerFrame = 0;
+var spinnerFrames = ["◐", "◓", "◑", "◒"];
+var screenIds = ["screen-policy", "screen-policy-refused", "screen-detect", "screen-windows", "screen-accounts", "screen-confirm", "screen-result"];
+var currentLanguage = "fr";
+var translations = {
+    fr: {
+        privacyTitle: "Politique de confidentialité",
+        privacyIntro: "SUPER NOVA RECOVERY est un outil hors ligne de récupération Windows.",
+        privacyData: "Aucune donnée, aucun mot de passe et aucune clé BitLocker ne sont envoyés sur Internet.",
+        privacyProcessing: "L’outil analyse et modifie uniquement les volumes Windows que vous sélectionnez. Des fichiers temporaires et une sauvegarde protégée des ruches système peuvent être créés pendant l’opération, puis supprimés après son achèvement.",
+        privacyResponsibility: "Utilisez cet outil uniquement sur une machine et des données pour lesquels vous êtes autorisé. En continuant, vous acceptez ces conditions et comprenez que l’opération modifie des fichiers système.",
+        acceptPolicy: "J’accepte et je continue",
+        refusePolicy: "Je refuse",
+        policyRefused: "Vous avez refusé la politique de confidentialité. L’analyse des partitions est bloquée.",
+        quit: "Quitter",
+        continuePolicy: "Continuer vers la politique",
+        subtitle: "Réinitialisation de mot de passe Windows",
+        detectionStatus: "Statut de détection",
+        searching: '<span class="spinner"></span> Recherche de la partition Windows...',
+        analyzeDisks: "Analyser les disques",
+        windowsDetected: "Installations Windows détectées",
+        multipleWindows: "⚠️ Plusieurs installations Windows ont été trouvées. Sélectionnez celle à analyser.",
+        continuePartition: "Continuer avec cette partition",
+        accountsDetected: "Comptes détectés sur",
+        localOnly: "⚠️ Fonctionne uniquement avec les comptes locaux.",
+        microsoftHelp: "Compte Microsoft (@outlook, @hotmail) → <strong>account.live.com</strong>",
+        resetPassword: "🔑 Réinitialiser le mot de passe",
+        selectedAccount: "Compte sélectionné",
+        confirmWarning: "⚠️ Cette opération va modifier des fichiers système Windows.<br>Assurez-vous d'avoir l'autorisation d'accéder à ce PC.<br>Le déclencheur 5× Maj est à usage unique : il est retiré dès le lancement<br>(et à la prochaine connexion si 5× Maj n'est pas utilisé).",
+        confirmReset: "✓ Confirmer la réinitialisation",
+        reboot: "↺ Redémarrer le PC",
+        restartAnalysis: "Recommencer",
+        windowsOn: "🖥️ Windows sur {drive}:\\",
+        windowsPartition: "Partition contenant les fichiers système Windows",
+        detectionAgain: "Choisissez « Analyser les disques » pour relancer la recherche.",
+        bitlocker: "⚠ Partition BitLocker verrouillée détectée sur {drives}. Déverrouillez-la avec votre clé de récupération, puis relancez l'analyse.",
+        windowsNotFound: "✗ Partition Windows introuvable.",
+        windowsFound: "✓ Windows trouvé sur {drive}:\\",
+        bitlockerDrive: "⚠ Partition BitLocker verrouillée sur {drive}:\\. Déverrouillez-la avec votre clé de récupération, puis relancez l'analyse.",
+        noAccounts: "Aucun compte local personnel trouvé sur {drive}:\\. Sélectionnez une autre installation Windows.",
+        noAccountsSingle: "⚠ Aucun compte local personnel trouvé sur {drive}:\\",
+        samUnreadable: "✗ SAM illisible : {error}",
+        criticalError: "✗ ERREUR CRITIQUE : {error} (ligne {line})",
+        operationError: "✗ Erreur : {error}",
+        invalidSelection: "⚠ Veuillez sélectionner un compte avant de continuer.",
+        invalidAccount: "⚠ Nom de compte invalide. Sélectionnez un autre compte.",
+        operationInProgress: "Opération en cours",
+        applyingChanges: "Application des modifications...",
+        result: "Résultat",
+        readySteps: "✓ Prêt ! Suivez les étapes ci-dessous.",
+        permissionsVerified: "✓ Permissions du dossier vérifiées",
+        nextSteps: "Prochaines étapes",
+        removeUsb: "🔌 Retirez la clé USB",
+        restartPc: "🔄 Redémarrez le PC",
+        shiftInstruction: "Sur l'écran de login → appuyez <strong class=\"hl\">5x sur Maj</strong> (une seule fois)",
+        triggerInstruction: "Suivez les instructions à l'écran — le déclencheur SYSTEM est retiré dès l'ouverture",
+        operationFailed: "✗ Opération échouée",
+        restarting: "Redémarrage",
+        restartInProgress: "↺ Redémarrage en cours...",
+        builtinAdmin: "Administrateur intégré",
+        windowsAccount: "Compte Windows",
+        scriptGenerated: "✓ Script de réinitialisation généré",
+        scriptsLocked: "✓ Dossier des scripts verrouillé (lecture seule pour les utilisateurs standard)",
+        permissionsChecked: "✓ Permissions du dossier vérifiées",
+        backupProtected: "✓ Sauvegarde protégée des ruches SAM, SYSTEM et SECURITY",
+        ifeoConfigured: "✓ Options d'exécution (IFEO) configurées (usage unique)",
+        ifeoCleanup: "✓ Filet IFEO : nettoyage à la prochaine connexion",
+        runOnceWarning: "⚠ Filet RunOnce non posé (code {code}) — le déclencheur reste à usage unique",
+        readyReboot: "✓ L'ordinateur est prêt. Retirez la clé et redémarrez.",
+        ifeoFailed: "✗ Impossible d'injecter la clé IFEO (code {code})"
+    },
+    en: {
+        privacyTitle: "Privacy policy",
+        privacyIntro: "SUPER NOVA RECOVERY is an offline Windows recovery tool.",
+        privacyData: "No data, password or BitLocker key is sent over the Internet.",
+        privacyProcessing: "The tool only analyzes and modifies the Windows volumes you select. Temporary files and a protected backup of system hives may be created during the operation and removed when it is complete.",
+        privacyResponsibility: "Use this tool only on a machine and data you are authorized to access. By continuing, you accept these terms and understand that the operation modifies system files.",
+        acceptPolicy: "I accept and continue",
+        refusePolicy: "I refuse",
+        policyRefused: "You refused the privacy policy. Partition analysis is blocked.",
+        quit: "Quit",
+        continuePolicy: "Return to the policy",
+        subtitle: "Windows password reset",
+        detectionStatus: "Detection status",
+        searching: '<span class="spinner"></span> Searching for a Windows partition...',
+        analyzeDisks: "Scan disks",
+        windowsDetected: "Detected Windows installations",
+        multipleWindows: "⚠️ Several Windows installations were found. Select the one to analyze.",
+        continuePartition: "Continue with this partition",
+        accountsDetected: "Accounts detected on",
+        localOnly: "⚠️ Works only with local accounts.",
+        microsoftHelp: "Microsoft account (@outlook, @hotmail) → <strong>account.live.com</strong>",
+        resetPassword: "🔑 Reset password",
+        selectedAccount: "Selected account",
+        confirmWarning: "⚠️ This operation will modify Windows system files.<br>Make sure you are authorized to access this PC.<br>The 5× Shift trigger is one-time and is removed when launched<br>(and at the next sign-in if 5× Shift is not used).",
+        confirmReset: "✓ Confirm reset",
+        reboot: "↺ Restart the PC",
+        restartAnalysis: "Start over",
+        windowsOn: "🖥️ Windows on {drive}:\\",
+        windowsPartition: "Partition containing Windows system files",
+        detectionAgain: "Choose “Scan disks” to search again.",
+        bitlocker: "⚠ Locked BitLocker partition detected on {drives}. Unlock it with your recovery key, then scan again.",
+        windowsNotFound: "✗ Windows partition not found.",
+        windowsFound: "✓ Windows found on {drive}:\\",
+        bitlockerDrive: "⚠ Locked BitLocker partition on {drive}:\\. Unlock it with your recovery key, then scan again.",
+        noAccounts: "No personal local account found on {drive}:\\. Select another Windows installation.",
+        noAccountsSingle: "⚠ No personal local account found on {drive}:\\",
+        samUnreadable: "✗ SAM cannot be read: {error}",
+        criticalError: "✗ CRITICAL ERROR: {error} (line {line})",
+        operationError: "✗ Error: {error}",
+        invalidSelection: "⚠ Select an account before continuing.",
+        invalidAccount: "⚠ Invalid account name. Select another account.",
+        operationInProgress: "Operation in progress",
+        applyingChanges: "Applying changes...",
+        result: "Result",
+        readySteps: "✓ Ready! Follow the steps below.",
+        permissionsVerified: "✓ Folder permissions verified",
+        nextSteps: "Next steps",
+        removeUsb: "🔌 Remove the USB drive",
+        restartPc: "🔄 Restart the PC",
+        shiftInstruction: "On the login screen → press <strong class=\"hl\">Shift 5 times</strong> (once)",
+        triggerInstruction: "Follow the on-screen instructions — the SYSTEM trigger is removed at launch",
+        operationFailed: "✗ Operation failed",
+        restarting: "Restart",
+        restartInProgress: "↺ Restarting...",
+        builtinAdmin: "Built-in administrator",
+        windowsAccount: "Windows account",
+        scriptGenerated: "✓ Reset script generated",
+        scriptsLocked: "✓ Script folder locked (read-only for standard users)",
+        permissionsChecked: "✓ Folder permissions verified",
+        backupProtected: "✓ Protected backup of SAM, SYSTEM and SECURITY hives",
+        ifeoConfigured: "✓ IFEO execution options configured (one-time use)",
+        ifeoCleanup: "✓ IFEO cleanup scheduled at next sign-in",
+        runOnceWarning: "⚠ RunOnce fallback not set (code {code}) — trigger remains one-time",
+        readyReboot: "✓ The computer is ready. Remove the USB drive and restart.",
+        ifeoFailed: "✗ Could not inject IFEO (code {code})"
+    }
+};
+
+function formatText(key, values) {
+    var value = translations[currentLanguage][key] || translations.fr[key] || key;
+    if (values) for (var name in values) value = value.replace(new RegExp("\\{" + name + "\\}", "g"), values[name]);
+    return value;
+}
+
+function t(key) {
+    return formatText(key);
+}
+
+function setLanguage(lang) {
+    currentLanguage = (lang === "en") ? "en" : "fr";
+    var nodes = document.getElementsByTagName("*");
+    for (var i = 0; i < nodes.length; i++) {
+        var key = nodes[i].getAttribute("data-i18n");
+        if (key) nodes[i].innerHTML = t(key);
+    }
+}
 
 function byId(id) {
     return document.getElementById(id);
@@ -648,6 +937,13 @@ function isBuiltinAdmin(name) {
     return n === "administrateur" || n === "administrator";
 }
 
+function isSystemAccount(name) {
+    var n = String(name).toLowerCase();
+    return n === "administrateur" || n === "administrator" ||
+        n === "invit\u00e9" || n === "invite" || n === "guest" ||
+        n === "defaultaccount" || n === "wdagutilityaccount" || n === "wsiaccount";
+}
+
 function isSafeAccountName(name) {
     var s = String(name);
     if (!s || s.length > 64) return false;
@@ -655,7 +951,7 @@ function isSafeAccountName(name) {
 }
 
 function accountTypeLabel(name) {
-    return isBuiltinAdmin(name) ? "Administrateur int\u00e9gr\u00e9" : "Compte Windows";
+    return isBuiltinAdmin(name) ? t("builtinAdmin") : t("windowsAccount");
 }
 
 function escapeHtml(s) {
@@ -686,6 +982,53 @@ function showScreen(id) {
 
 function setDetectStatus(html) {
     byId("detect-status").innerHTML = html;
+    if (html.indexOf('class="spinner"') >= 0) {
+        startSpinner();
+    } else {
+        stopSpinner();
+    }
+}
+
+function updateSpinnerFrames() {
+    var nodes = document.getElementsByTagName("span");
+    var frame = spinnerFrames[spinnerFrame % spinnerFrames.length];
+    for (var i = 0; i < nodes.length; i++) {
+        if ((" " + nodes[i].className + " ").indexOf(" spinner ") >= 0) {
+            nodes[i].innerText = frame;
+        }
+    }
+    spinnerFrame++;
+}
+
+function startSpinner() {
+    stopSpinner();
+    spinnerFrame = 0;
+    updateSpinnerFrames();
+    spinnerTimer = window.setInterval(updateSpinnerFrames, 140);
+}
+
+function stopSpinner() {
+    if (spinnerTimer !== null) {
+        window.clearInterval(spinnerTimer);
+        spinnerTimer = null;
+    }
+}
+
+function acceptPolicy() {
+    showScreen("screen-detect");
+    setTimeout(detectWindows, 100);
+}
+
+function refusePolicy() {
+    showScreen("screen-policy-refused");
+}
+
+function returnToPolicy() {
+    showScreen("screen-policy");
+}
+
+function quitApplication() {
+    window.close();
 }
 
 window.onload = function() {
@@ -698,26 +1041,107 @@ window.onload = function() {
     );
     byId("app").style.maxHeight = Math.round(h * 0.88) + "px";
     byId("accounts-list").style.maxHeight = Math.round(h * 0.30) + "px";
-    setTimeout(detectWindows, 500);
+    setLanguage(currentLanguage);
 };
 
 function detectWindows() {
-    setDetectStatus('<span class="spinner"></span> Recherche en cours...');
+    setDetectStatus(t("searching"));
     try {
-        var drive = FindWindowsDrive();
-        if (drive === "") {
-            setDetectStatus('<span class="error">\u2717 Partition Windows introuvable.</span>');
+        var rawDrives = FindWindowsDrives();
+        if (rawDrives === "") {
+            var lockedDrives = FindLockedBitLockerDrives();
+            if (lockedDrives !== "") {
+                var lockedLabel = lockedDrives.split("|").join(":\\, ") + ":\\";
+                setDetectStatus('<span class="warn">' + formatText("bitlocker", {drives: escapeHtml(lockedLabel)}) + '</span>');
+            } else {
+                setDetectStatus('<span class="error">' + t("windowsNotFound") + '</span>');
+            }
             return;
         }
-        windowsDrive = drive;
-        if (IsBitLockerActive(drive)) {
-            setDetectStatus('<span class="warn">\u26a0 BitLocker d\u00e9tect\u00e9 sur ' + drive + ':\\</span>');
+        var drives = rawDrives.split("|");
+        detectedWindowsDrives = drives;
+        if (drives.length === 1) {
+            openWindowsDrive(drives[0]);
             return;
         }
-        setDetectStatus('<span class="found">\u2713 Windows trouv\u00e9 sur ' + drive + ':\\</span>');
+        renderWindowsDrives(drives);
+        showScreen("screen-windows");
+    } catch (e) {
+        setDetectStatus('<span class="error">' + formatText("operationError", {error: escapeHtml(e.message)}) + '</span>');
+    }
+}
+
+function renderWindowsDrives(drives) {
+    var list = byId("windows-list");
+    list.innerHTML = "";
+    selectedWindowsDrive = "";
+    byId("btn-windows").disabled = true;
+    for (var i = 0; i < drives.length; i++) {
+        var drive = drives[i];
+        var div = document.createElement("div");
+        div.className = "account-item";
+        div.setAttribute("data-drive", drive);
+        div.innerHTML = '<div class="acc-name">' + formatText("windowsOn", {drive: escapeHtml(drive)}) + '</div>' +
+            '<div class="acc-type">' + t("windowsPartition") + '</div>';
+        div.onclick = function() { selectWindowsDrive(this); };
+        list.appendChild(div);
+    }
+}
+
+function selectWindowsDrive(el) {
+    var choices = byId("windows-list").children;
+    for (var i = 0; i < choices.length; i++) {
+        choices[i].className = "account-item";
+    }
+    el.className = "account-item selected";
+    selectedWindowsDrive = el.getAttribute("data-drive");
+    byId("btn-windows").disabled = false;
+    clearWindowsError();
+}
+
+function confirmWindowsDrive() {
+    if (selectedWindowsDrive !== "") openWindowsDrive(selectedWindowsDrive);
+}
+
+function clearWindowsError() {
+    var error = byId("windows-error");
+    error.className = "inline-error hidden";
+    error.innerHTML = "";
+}
+
+function showWindowsError(message) {
+    var error = byId("windows-error");
+    error.className = "inline-error";
+    error.textContent = message;
+}
+
+function returnToDetection() {
+    selectedWindowsDrive = "";
+    showScreen("screen-detect");
+    setDetectStatus('<span class="info">' + t("detectionAgain") + '</span>');
+}
+
+function returnFromAccounts() {
+    if (detectedWindowsDrives.length > 1) {
+        renderWindowsDrives(detectedWindowsDrives);
+        showScreen("screen-windows");
+        return;
+    }
+    returnToDetection();
+}
+
+function openWindowsDrive(drive) {
+    windowsDrive = drive;
+    try {
+        if (IsBitLockerLocked(drive)) {
+            showScreen("screen-detect");
+            setDetectStatus('<span class="warn">' + formatText("bitlockerDrive", {drive: escapeHtml(drive)}) + '</span>');
+            return;
+        }
+        setDetectStatus('<span class="found">' + formatText("windowsFound", {drive: escapeHtml(drive)}) + '</span>');
         loadAccounts(drive);
     } catch (e) {
-        setDetectStatus('<span class="error">\u2717 Erreur : ' + e.message + '</span>');
+        setDetectStatus('<span class="error">' + formatText("operationError", {error: escapeHtml(e.message)}) + '</span>');
     }
 }
 
@@ -728,18 +1152,24 @@ function loadAccounts(drive) {
         if (rawString !== "") {
             var splitted = rawString.split("|");
             for (var i = 0; i < splitted.length; i++) {
-                if (splitted[i] !== "") accounts.push(splitted[i]);
+                if (splitted[i] !== "" && !isSystemAccount(splitted[i])) accounts.push(splitted[i]);
             }
         }
         if (accounts.length === 0) {
-            setDetectStatus('<span class="error">\u2717 Aucun compte trouv\u00e9.</span>');
+            if (detectedWindowsDrives.length > 1) {
+                showWindowsError(formatText("noAccounts", {drive: escapeHtml(drive)}));
+                showScreen("screen-windows");
+            } else {
+                showScreen("screen-detect");
+                setDetectStatus('<span class="warn">' + formatText("noAccountsSingle", {drive: escapeHtml(drive)}) + '</span>');
+            }
             return;
         }
         byId("drive-label").textContent = drive + ":\\Windows";
         renderAccounts();
         showScreen("screen-accounts");
     } catch (e) {
-        setDetectStatus('<span class="error">\u2717 SAM illisible : ' + e.message + '</span>');
+        setDetectStatus('<span class="error">' + formatText("samUnreadable", {error: escapeHtml(e.message)}) + '</span>');
     }
 }
 
@@ -776,7 +1206,7 @@ function confirmReset() {
             var err = document.createElement("div");
             err.id = "no-account-error";
             err.className = "inline-error";
-            err.textContent = "\u26a0 Veuillez s\u00e9lectionner un compte avant de continuer.";
+            err.textContent = t("invalidSelection");
             byId("btn-reset").parentNode.insertBefore(err, byId("btn-reset").nextSibling);
         }
         return;
@@ -787,15 +1217,15 @@ function confirmReset() {
             var err = document.createElement("div");
             err.id = "no-account-error";
             err.className = "inline-error";
-            err.textContent = "\u26a0 Nom de compte invalide. Selectionnez un autre compte.";
+            err.textContent = t("invalidAccount");
             byId("btn-reset").parentNode.insertBefore(err, byId("btn-reset").nextSibling);
         }
         return;
     }
     byId("confirm-account").innerHTML = "&#128100; " + escapeHtml(selectedAccount);
     byId("confirm-type").innerHTML = isBuiltinAdmin(selectedAccount)
-        ? "Administrateur int\u00e9gr\u00e9"
-        : "Compte Windows \u2014 " + windowsDrive + ":\\Windows";
+        ? t("builtinAdmin")
+        : t("windowsAccount") + " \u2014 " + windowsDrive + ":\\Windows";
     showScreen("screen-confirm");
 }
 
@@ -803,7 +1233,7 @@ function fillTemplate(id, account, snFolder) {
     return byId(id).value
         .replace(/\{\{ACCOUNT\}\}/g, account)
         .replace(/\{\{SN_FOLDER\}\}/g, snFolder)
-        .replace(/\{\{WIN_DRIVE\}\}/g, windowsDrive);
+        .replace(/\{\{WIN_DRIVE\}\}/g, "C");
 }
 
 function ensureFolder(path) {
@@ -818,79 +1248,178 @@ function writeTextFile(path, content) {
     file.Close();
 }
 
+function runCommandAsync(cmd, callback) {
+    var shell, exec;
+    try {
+        shell = new ActiveXObject("WScript.Shell");
+        exec = shell.Exec("cmd.exe /c " + cmd);
+    } catch (e) {
+        callback(-1, e);
+        return;
+    }
+    function poll() {
+        if (exec.Status === 0) {
+            window.setTimeout(poll, 50);
+        } else {
+            callback(exec.ExitCode, null);
+        }
+    }
+    window.setTimeout(poll, 20);
+}
+
 function executeReset() {
     showScreen("screen-result");
-    byId("result-status").innerHTML = '<div class="label">Op\u00e9ration en cours</div><span class="spinner"></span> Application des modifications...';
+    byId("result-status").innerHTML = '<div class="label">' + t("operationInProgress") + '</div><span class="spinner"></span> ' + t("applyingChanges");
     byId("result-steps").innerHTML = "";
     byId("btn-reboot").className = "btn btn-primary hidden";
-    try {
-        if (!isSafeAccountName(selectedAccount)) {
-            renderResult(false, ["\u2717 Nom de compte invalide."]);
-            return;
-        }
-        var peFolder = windowsDrive + ":\\SuperNova";
-        var bootFolder = windowsDrive + ":\\SuperNova";
-        var steps = [];
-        var success = true;
-
-        ensureFolder(peFolder);
-        writeTextFile(peFolder + "\\recovery_script.bat", fillTemplate("tpl-recovery-script", selectedAccount, bootFolder));
-        writeTextFile(peFolder + "\\CopyData.bat", fillTemplate("tpl-copy-data", selectedAccount, bootFolder));
-        writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
-        writeTextFile(peFolder + "\\ifeo_launch.bat",
-            "@echo off\r\n" +
-            "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
-            "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
-            "start \"SUPER NOVA RECOVERY\" cmd.exe /k \"%~dp0recovery_script.bat\"\r\n" +
-            "exit\r\n" +
-            ":MISSING\r\n" +
-            "echo Script de recuperation introuvable.\r\n" +
-            "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
-            "pause\r\n");
-        steps.push("\u2713 Script de r\u00e9initialisation g\u00e9n\u00e9r\u00e9");
-
-        RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
-        RunCmd("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"");
-        var launchPath = bootFolder + "\\ifeo_launch.bat";
-        var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /k \\\"" + launchPath + "\\\"\" /f";
-        var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
-        var rIFEO = RunCmd(ifeoCmd);
-        var rOnce = RunCmd(runOnceCmd);
-        RunCmd("reg unload HKLM\\OFFLINE_SOFTWARE");
-
-        if (rIFEO === 0) {
-            steps.push("\u2713 Options d'ex\u00e9cution (IFEO) configur\u00e9es (usage unique)");
-            if (rOnce === 0) {
-                steps.push("\u2713 Filet IFEO : nettoyage \u00e0 la prochaine connexion");
-            } else {
-                steps.push("\u26a0 Filet RunOnce non pos\u00e9 (code " + rOnce + ") \u2014 le d\u00e9clencheur reste \u00e0 usage unique");
+    startSpinner();
+    setTimeout(function() {
+        try {
+            if (!isSafeAccountName(selectedAccount)) {
+                renderResult(false, ["\u2717 Nom de compte invalide."]);
+                return;
             }
-            steps.push("\u2713 L'ordinateur est pr\u00eat. Retirez la cl\u00e9 et red\u00e9marrez.");
-        } else {
-            steps.push("\u2717 Impossible d'injecter la cl\u00e9 IFEO (code " + rIFEO + ")");
-            success = false;
+            var peFolder = windowsDrive + ":\\SuperNova";
+            var bootFolder = "C:\\SuperNova";
+            var steps = [];
+
+            ensureFolder(peFolder);
+            writeTextFile(peFolder + "\\recovery_script.bat", fillTemplate("tpl-recovery-script", selectedAccount, bootFolder));
+            writeTextFile(peFolder + "\\CopyData.bat", fillTemplate("tpl-copy-data", selectedAccount, bootFolder));
+            writeTextFile(peFolder + "\\NettoyageFinal.bat", fillTemplate("tpl-nettoyage", selectedAccount, bootFolder));
+            writeTextFile(peFolder + "\\ifeo_launch.bat",
+                "@echo off\r\n" +
+                "set \"SN_LOG=%SystemDrive%\\SuperNova_IFEO_debug.log\"\r\n" +
+                "> \"%SN_LOG%\" echo ==== SUPER NOVA IFEO %DATE% %TIME% ====\r\n" +
+                ">> \"%SN_LOG%\" echo Lanceur demarre sous %USERNAME%.\r\n" +
+                "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f >nul 2>&1\r\n" +
+                ">> \"%SN_LOG%\" echo Declencheur IFEO retire.\r\n" +
+                "if not exist \"%~dp0recovery_script.bat\" goto :MISSING\r\n" +
+                ">> \"%SN_LOG%\" echo Lancement de recovery_script.bat dans la console partagee.\r\n" +
+                "start \"\" /b cmd.exe /d /k call \"%~dp0recovery_script.bat\"\r\n" +
+                ">> \"%SN_LOG%\" echo Console de recuperation lancee.\r\n" +
+                "exit\r\n" +
+                ":MISSING\r\n" +
+                ">> \"%SN_LOG%\" echo ERREUR: recovery_script.bat introuvable.\r\n" +
+                "echo Script de recuperation introuvable.\r\n" +
+                "echo Le declencheur SYSTEM IFEO a ete retire.\r\n" +
+                "pause\r\n");
+            steps.push(t("scriptGenerated"));
+
+            var aclCmd = "icacls \"" + peFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX";
+            var backupFolder = peFolder + "\\Backup";
+            var backupAclCmd = "icacls \"" + backupFolder + "\" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F";
+            var hives = ["SAM", "SYSTEM", "SECURITY"];
+
+            function fail(message) {
+                renderResult(false, [message]);
+            }
+            function checked(cmd, onSuccess, message) {
+                runCommandAsync(cmd, function(code) {
+                    if (code !== 0) {
+                        fail(message(code));
+                    } else {
+                        onSuccess();
+                    }
+                });
+            }
+
+            checked(aclCmd, function() {
+                checked("icacls \"" + peFolder + "\" /verify", function() {
+                    steps.push(t("scriptsLocked"));
+                    steps.push(t("permissionsChecked"));
+                    ensureFolder(backupFolder);
+                    checked(backupAclCmd, function() {
+                        checked("icacls \"" + backupFolder + "\" /verify", function() {
+                            var backupHive = function(index) {
+                                if (index >= hives.length) {
+                                    steps.push(t("backupProtected"));
+                                    runCommandAsync("reg unload HKLM\\OFFLINE_SOFTWARE", function() {
+                                        runCommandAsync("reg load HKLM\\OFFLINE_SOFTWARE \"" + windowsDrive + ":\\Windows\\System32\\config\\SOFTWARE\"", loadSoftware);
+                                    });
+                                    return;
+                                }
+                                var hive = hives[index];
+                                var sourceHive = windowsDrive + ":\\Windows\\System32\\config\\" + hive;
+                                var targetHive = backupFolder + "\\" + hive;
+                                checked("copy /Y \"" + sourceHive + "\" \"" + targetHive + "\"", function() {
+                                    backupHive(index + 1);
+                                }, function(code) {
+                                    return "\u2717 Sauvegarde de la ruche " + hive + " impossible (code " + code + "). L'op\u00e9ration est interrompue avant toute modification.";
+                                });
+                            };
+                            backupHive(0);
+                        }, function(code) {
+                            return "\u2717 Les permissions de la sauvegarde sont invalides (code " + code + "). L'op\u00e9ration est interrompue.";
+                        });
+                    }, function(code) {
+                        return "\u2717 Impossible de prot\u00e9ger la sauvegarde des ruches (code " + code + "). L'op\u00e9ration est interrompue.";
+                    });
+                }, function(code) {
+                    return "\u2717 Les permissions du dossier sont invalides (code " + code + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9.";
+                });
+            }, function(code) {
+                return "\u2717 Impossible de prot\u00e9ger le dossier des scripts (code " + code + "). Le d\u00e9clencheur n'a pas \u00e9t\u00e9 activ\u00e9.";
+            });
+
+            function loadSoftware(rLoadSoftware) {
+                if (rLoadSoftware !== 0) {
+                    fail("\u2717 Impossible de charger le registre SOFTWARE (code " + rLoadSoftware + "). Aucune modification n'a \u00e9t\u00e9 appliqu\u00e9e.");
+                    return;
+                }
+                var launchPath = bootFolder + "\\ifeo_launch.bat";
+                var ifeoCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /t REG_SZ /d \"cmd.exe /d /k " + launchPath + "\" /f";
+                var runOnceCmd = "reg add \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v SuperNovaIFEOCleanup /t REG_SZ /d \"reg.exe delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\\" /v Debugger /f\" /f";
+                runCommandAsync(ifeoCmd, function(rIFEO) {
+                    runCommandAsync(runOnceCmd, function(rOnce) {
+                        runCommandAsync("reg unload HKLM\\OFFLINE_SOFTWARE", function(rUnloadSoftware) {
+                            if (rUnloadSoftware !== 0) {
+                                runCommandAsync("reg delete \"HKLM\\OFFLINE_SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\" /v Debugger /f", function() {
+                                    runCommandAsync("reg unload HKLM\\OFFLINE_SOFTWARE", function(retryUnload) {
+                                        fail("\u2717 Impossible de d\u00e9charger le registre SOFTWARE (code " + retryUnload + "). Red\u00e9marrez sans utiliser le d\u00e9clencheur et v\u00e9rifiez le disque.");
+                                    });
+                                });
+                                return;
+                            }
+                            if (rIFEO === 0) {
+                                steps.push(t("ifeoConfigured"));
+                                if (rOnce === 0) {
+                                    steps.push(t("ifeoCleanup"));
+                                } else {
+                                    steps.push(formatText("runOnceWarning", {code: rOnce}));
+                                }
+                                steps.push(t("readyReboot"));
+                                renderResult(true, steps);
+                            } else {
+                                steps.push(formatText("ifeoFailed", {code: rIFEO}));
+                                renderResult(false, steps);
+                            }
+                        });
+                    });
+                });
+            }
+        } catch (e) {
+            renderResult(false, ["\u2717 Erreur JS: " + e.message]);
         }
-        renderResult(success, steps);
-    } catch (e) {
-        renderResult(false, ["\u2717 Erreur JS: " + e.message]);
-    }
+    }, 80);
 }
 
 function renderResult(success, steps) {
-    byId("result-status").innerHTML = '<div class="label">R\u00e9sultat</div>' +
+    stopSpinner();
+    byId("result-status").innerHTML = '<div class="label">' + t("result") + '</div>' +
         (success
-            ? '<span class="found result-ok">\u2713 Pr\u00eat ! Suivez les \u00e9tapes ci-dessous.</span>'
-            : '<span class="error result-fail">\u2717 Op\u00e9ration \u00e9chou\u00e9e</span><br>' + steps[steps.length - 1]);
+            ? '<span class="found result-ok">' + t("readySteps") + '</span><br><span class="info">' + t("permissionsVerified") + '</span>'
+            : '<span class="error result-fail">' + t("operationFailed") + '</span><br>' + steps[steps.length - 1]);
 
     if (success) {
         byId("btn-reboot").className = "btn btn-primary";
         byId("result-steps").innerHTML =
-            '<div class="step-title step-title-lg">Prochaines \u00e9tapes</div>' +
+            '<div class="step-title step-title-lg">' + t("nextSteps") + '</div>' +
             '<div class="next-steps">' +
-            '<div>1. \uD83D\uDD0C Retirez la cl\u00e9 USB</div>' +
-            '<div>2. \uD83D\uDD04 Red\u00e9marrez le PC</div>' +
-            '<div>3. Sur l\'\u00e9cran de login \u2192 appuyez <strong class="hl">5x sur Maj</strong> (une seule fois)</div>' +
-            '<div>4. Suivez les instructions \u00e0 l\'\u00e9cran \u2014 le d\u00e9clencheur SYSTEM est retir\u00e9 d\u00e8s l\'ouverture</div>' +
+            '<div>1. ' + t("removeUsb") + '</div>' +
+            '<div>2. ' + t("restartPc") + '</div>' +
+            '<div>3. ' + t("shiftInstruction") + '</div>' +
+            '<div>4. ' + t("triggerInstruction") + '</div>' +
             '</div>';
     } else {
         byId("btn-reboot").className = "btn btn-primary hidden";
@@ -901,7 +1430,7 @@ function renderResult(success, steps) {
 function reboot() {
     var shell = new ActiveXObject("WScript.Shell");
     shell.Run("cmd.exe /c shutdown /r /t 5 || wpeutil reboot", 0, false);
-    byId("result-status").innerHTML = '<div class="label">Red\u00e9marrage</div><span class="info">\u21ba Red\u00e9marrage en cours...</span>';
+    byId("result-status").innerHTML = '<div class="label">' + t("restarting") + '</div><span class="info">' + t("restartInProgress") + '</span>';
 }
 </script>
 

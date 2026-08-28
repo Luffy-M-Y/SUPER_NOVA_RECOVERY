@@ -64,6 +64,26 @@ if errorlevel 1 (
     echo ERREUR : Impossible d'ajouter WinPE-Scripting_fr-fr.cab
     goto :EOF
 )
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-WMI.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-WMI.cab
+    goto :EOF
+)
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-WMI_fr-fr.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-WMI_fr-fr.cab
+    goto :EOF
+)
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\WinPE-SecureStartup.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-SecureStartup.cab
+    goto :EOF
+)
+Dism /Add-Package /Image:"%MOUNT%" /PackagePath:"%WINPEROOT%\amd64\WinPE_OCs\fr-fr\WinPE-SecureStartup_fr-fr.cab"
+if errorlevel 1 (
+    echo ERREUR : Impossible d'ajouter WinPE-SecureStartup_fr-fr.cab
+    goto :EOF
+)
 mkdir "%MOUNT%\SuperNova"
 copy /Y "%PROJECT%recovery.hta" "%MOUNT%\SuperNova\"
 if errorlevel 1 (
@@ -74,8 +94,8 @@ if not exist "%MOUNT%\SuperNova\recovery.hta" (
     echo ERREUR : recovery.hta absent de l'image.
     goto :EOF
 )
-if exist "%PROJECT%assets\supernova.ico" (
-    copy /Y "%PROJECT%assets\supernova.ico" "%MOUNT%\SuperNova\"
+if exist "%PROJECT%assets\SUPER_NOVA.ico" (
+    copy /Y "%PROJECT%assets\SUPER_NOVA.ico" "%MOUNT%\SuperNova\"
 )
 
 REM ── Étape 5 : Configurer le démarrage automatique ─────────────────────────
@@ -119,9 +139,16 @@ if errorlevel 1 (
 )
 
 if exist "%OUTPUT%\SUPER_NOVA_RECOVERY.iso" del "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
-MakeWinPEMedia /ISO "%WORKSPACE%" "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
+call MakeWinPEMedia /ISO "%WORKSPACE%" "%OUTPUT%\SUPER_NOVA_RECOVERY.iso"
 if errorlevel 1 (
     echo ERREUR : Impossible de creer l'ISO.
+    goto :EOF
+)
+
+echo Generation des empreintes SHA256 des livrables...
+powershell -NoProfile -Command "$files = @('%OUTPUT%\SUPER_NOVA_RECOVERY.zip', '%OUTPUT%\SUPER_NOVA_RECOVERY.iso'); $lines = foreach ($file in $files) { $hash = Get-FileHash -LiteralPath $file -Algorithm SHA256; '{0} *{1}' -f $hash.Hash, (Split-Path -Leaf $file) }; $lines | Set-Content -Encoding ascii '%OUTPUT%\SHA256SUMS.txt'"
+if errorlevel 1 (
+    echo ERREUR : Impossible de generer SHA256SUMS.txt.
     goto :EOF
 )
 
