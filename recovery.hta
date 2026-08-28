@@ -413,10 +413,15 @@ echo Copie de vos fichiers en cours...
 echo.
 mkdir "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" 2>nul
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Desktop" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Documents" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Pictures" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Downloads" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Users\{{ACCOUNT}}\Videos" "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" /E /MT:8 /R:1 /W:1 /NP
+if errorlevel 8 goto :COPY_ERROR
 echo.
 echo =========================================
 echo  COPIE TERMINEE !
@@ -481,10 +486,15 @@ echo.
 echo Vous avez choisi de garder le compte SuperNovaAdmin.
 echo Transfert des donnees vers vos dossiers personnels...
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
@@ -503,6 +513,13 @@ exit
 :END_SCRIPT
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /v SNCleanupCopyData /t REG_SZ /d "cmd.exe /c del \"%~f0\"" /f >nul 2>&amp;1
 exit
+
+:COPY_ERROR
+echo.
+echo [ERREUR] La copie des donnees a echoue (code Robocopy 8 ou superieur).
+echo La sauvegarde est conservee. Corrigez le probleme puis relancez l'outil.
+pause
+goto :END_SCRIPT
 </textarea>
 <textarea id="tpl-nettoyage">@echo off
 color 0F
@@ -527,10 +544,15 @@ goto :SKIP_CLEAN
 echo.
 echo Transfert des donnees vers votre nouveau compte...
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "%USERPROFILE%\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "%USERPROFILE%\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "%USERPROFILE%\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "%USERPROFILE%\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "%USERPROFILE%\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
@@ -558,10 +580,15 @@ echo.
 echo Vous avez choisi de CONSERVER le compte SuperNovaAdmin.
 echo Transfert des donnees vers le compte SuperNovaAdmin...
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Bureau" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Desktop" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Documents" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Documents" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Images" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Pictures" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Telechargements" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Downloads" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 robocopy "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}\Videos" "{{WIN_DRIVE}}:\Users\SuperNovaAdmin\Videos" /E /MOVE /IS /R:1 /W:1 >nul 2>&amp;1
+if errorlevel 8 goto :COPY_ERROR
 rd /s /q "{{WIN_DRIVE}}:\Backup_{{ACCOUNT}}" >nul 2>&amp;1
 echo [OK] Transfert termine avec succes !
 echo.
@@ -582,6 +609,13 @@ start "" /b cmd /c "timeout /t 2 /nobreak >nul &amp; rd /s /q ""{{SN_FOLDER}}"""
 echo Le PC va redemarrer dans 15 secondes pour appliquer les modifications.
 shutdown /r /t 15
 timeout /t 14 /nobreak >nul
+exit
+
+:COPY_ERROR
+echo.
+echo [ERREUR] Le transfert des donnees a echoue (code Robocopy 8 ou superieur).
+echo La sauvegarde est conservee. Corrigez le probleme puis relancez NettoyageFinal.
+pause
 exit
 </textarea>
 </div>
