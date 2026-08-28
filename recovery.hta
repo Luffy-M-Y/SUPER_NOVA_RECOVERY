@@ -944,7 +944,7 @@ window.onload = function() {
 };
 
 function detectWindows() {
-    setDetectStatus('<span class="spinner"></span> ' + (currentLanguage === "en" ? "Searching..." : "Recherche en cours..."));
+    setDetectStatus(t("searching"));
     try {
         var rawDrives = FindWindowsDrives();
         if (rawDrives === "") {
