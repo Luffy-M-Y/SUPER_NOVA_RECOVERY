@@ -6,6 +6,7 @@ import ctypes
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -156,15 +157,22 @@ def prepare_usb(device: str, status, progress, cancel_event: threading.Event) ->
 
         iso_path = str(local_iso).replace("'", "''")
         device_id = device.replace("'", "''")
+        match = re.search(r"PHYSICALDRIVE(\d+)$", device.upper())
+        if not match:
+            raise RuntimeError("Identifiant de disque USB invalide.")
+        disk_number = int(match.group(1))
         script = f"""
 $ErrorActionPreference = 'Stop'
 $iso = '{iso_path}'
 $device = '{device_id}'
-$usb = Get-CimInstance Win32_DiskDrive | Where-Object DeviceID -eq $device
-if (-not $usb -or $usb.InterfaceType -ne 'USB') {{ throw 'Le disque USB sélectionné est introuvable.' }}
-$disk = Get-Disk | Where-Object Number -eq $usb.Index
-if (-not $disk) {{ throw 'Disque USB introuvable.' }}
+$diskNumber = {disk_number}
+$disk = Get-Disk -Number $diskNumber -ErrorAction SilentlyContinue
+$usb = Get-CimInstance Win32_DiskDrive | Where-Object Index -eq $diskNumber
+if (-not $disk -or (-not $usb -and $disk.BusType -ne 'USB')) {{ throw 'Disque USB introuvable.' }}
+if ($usb -and $usb.InterfaceType -ne 'USB' -and $disk.BusType -ne 'USB') {{ throw 'Selected disk is not USB.' }}
 if ($disk.IsSystem -or $disk.IsBoot) {{ throw 'Le disque sélectionné est un disque système ou de démarrage.' }}
+if ($disk.IsOffline) {{ Set-Disk -Number $disk.Number -IsOffline $false }}
+if ($disk.IsReadOnly) {{ Set-Disk -Number $disk.Number -IsReadOnly $false }}
 $null = Mount-DiskImage -ImagePath $iso -PassThru
 Start-Sleep -Seconds 2
 $volume = Get-DiskImage -ImagePath $iso | Get-Volume | Where-Object DriveLetter | Select-Object -First 1
@@ -173,10 +181,17 @@ if ($volume) {{ $source = $volume.DriveLetter + ':\\' }} else {{
     $source = (Get-CimInstance Win32_LogicalDisk -Filter \"DriveType=5\" | Where-Object Size -eq $isoSize | Select-Object -First 1).DeviceID + '\\'
 }}
 if (-not $source -or -not (Test-Path (Join-Path $source 'sources\\boot.wim'))) {{ throw 'Lecteur source ISO introuvable.' }}
-Clear-Disk -Number $disk.Number -RemoveData -Confirm:$false
-$disk = Get-Disk -Number $usb.Index
+Clear-Disk -Number $diskNumber -RemoveData -Confirm:$false
+Start-Sleep -Seconds 1
+$disk = Get-Disk -Number $diskNumber
 if ($disk.PartitionStyle -eq 'RAW') {{ Initialize-Disk -Number $disk.Number -PartitionStyle GPT }}
-$partition = New-Partition -DiskNumber $disk.Number -Size 30000000000 -AssignDriveLetter
+Start-Sleep -Seconds 1
+$disk = Get-Disk -Number $diskNumber
+$free = [int64]$disk.LargestFreeExtent
+$partitionSize = [math]::Min([int64]30000000000, $free - 1048576)
+$partitionSize = [math]::Floor($partitionSize / 1048576) * 1048576
+if ($partitionSize -lt 1000000000) {{ throw 'Espace libre insuffisant pour créer la partition FAT32.' }}
+$partition = New-Partition -DiskNumber $diskNumber -Size $partitionSize -AssignDriveLetter
 Format-Volume -Partition $partition -FileSystem FAT32 -NewFileSystemLabel 'SUPER_NOVA' -Confirm:$false | Out-Null
 $target = (Get-Volume -Partition $partition).DriveLetter + ':\\'
 Write-Output ($source + '|' + $target)
