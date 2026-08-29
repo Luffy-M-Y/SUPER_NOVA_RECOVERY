@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import hashlib
 import json
 import os
 import shutil
@@ -62,6 +63,14 @@ def usb_drives() -> list[tuple[str, str, int]]:
 
 def format_size(size: int) -> str:
     return f"{size / 1_000_000_000:.2f} GB"
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest().upper()
 
 
 def copy_file_ex(source: Path, target: Path, progress, cancel_event: threading.Event) -> None:
@@ -233,8 +242,8 @@ COLORS = {
 
 root = tk.Tk()
 root.title("SUPER NOVA RECOVERY")
-root.geometry("900x560")
-root.minsize(820, 520)
+root.geometry("900x640")
+root.minsize(820, 600)
 root.configure(bg=COLORS["bg"])
 if ICON.is_file():
     try:
@@ -274,6 +283,30 @@ iso_inner.pack(fill=tk.X, padx=18, pady=13)
 tk.Label(iso_inner, text="●", fg=COLORS["green"] if ISO.is_file() else COLORS["red"], bg=COLORS["panel"], font=("Segoe UI", 13)).pack(side=tk.LEFT, padx=(0, 10))
 tk.Label(iso_inner, text="Image ISO", fg=COLORS["text"], bg=COLORS["panel"], font=("Segoe UI", 10, "bold")).pack(side=tk.LEFT)
 tk.Label(iso_inner, text="trouvée" if ISO.is_file() else "introuvable", fg=COLORS["green"] if ISO.is_file() else COLORS["red"], bg=COLORS["panel"], font=("Segoe UI", 10, "bold")).pack(side=tk.RIGHT)
+iso_details = tk.Label(
+    iso_card,
+    text=(
+        f"Taille : {format_size(ISO.stat().st_size)}  •  FAT32 30 Go  •  UEFI / BIOS"
+        if ISO.is_file()
+        else "Aucune image ISO disponible"
+    ),
+    fg=COLORS["muted"],
+    bg=COLORS["panel"],
+    font=("Segoe UI", 8),
+    anchor="w",
+    justify="left",
+    wraplength=820,
+)
+iso_details.pack(fill=tk.X, padx=48, pady=(0, 5))
+iso_hash_label = tk.Label(
+    iso_card,
+    text="SHA-256 : calcul en cours…" if ISO.is_file() else "SHA-256 : indisponible",
+    fg=COLORS["muted"],
+    bg=COLORS["panel"],
+    font=("Segoe UI", 8),
+    anchor="w",
+)
+iso_hash_label.pack(fill=tk.X, padx=48, pady=(0, 12))
 
 usb_card = tk.Frame(container, bg=COLORS["panel"], highlightbackground=COLORS["border"], highlightthickness=1)
 usb_card.pack(fill=tk.X)
@@ -345,6 +378,16 @@ def refresh() -> None:
         status_label.config(text="Aucune clé USB détectée.")
     else:
         status_label.config(text=f"{len(drive_items)} clé(s) USB détectée(s). Sélectionnez-en une.")
+
+
+def load_iso_hash() -> None:
+    if not ISO.is_file():
+        return
+    try:
+        digest = sha256_file(ISO)
+        root.after(0, iso_hash_label.config, {"text": f"SHA-256 : {digest}"})
+    except OSError as error:
+        root.after(0, iso_hash_label.config, {"text": f"SHA-256 : erreur ({error})"})
 
 
 def cancel_operation() -> None:
@@ -421,4 +464,6 @@ refresh_button.config(command=refresh)
 create_button.config(command=create_usb)
 cancel_button.config(command=cancel_operation)
 refresh()
+if ISO.is_file():
+    threading.Thread(target=load_iso_hash, daemon=True).start()
 root.mainloop()
