@@ -1,99 +1,49 @@
-"""Read-only local manager for the SUPER NOVA recovery media."""
+"""SUPER NOVA Recovery USB manager.
 
+The USB creation path is intentionally guarded by explicit confirmation.
+"""
 from __future__ import annotations
 
-import argparse
 import json
+import os
 import subprocess
-from dataclasses import dataclass
+import tkinter as tk
+from tkinter import messagebox, ttk
 from pathlib import Path
-from typing import Iterable
 
+ROOT = Path(__file__).resolve().parent
+ISO = ROOT / "output" / "SUPER_NOVA_RECOVERY.iso"
 
-ISO_NAME = "SUPER_NOVA_RECOVERY.iso"
+def usb_drives():
+    q = "Get-CimInstance Win32_DiskDrive -Filter \"InterfaceType='USB'\" | Select Model,Size,DeviceID | ConvertTo-Json -Compress"
+    r = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", q], capture_output=True, text=True, check=True)
+    if not r.stdout.strip(): return []
+    rows = json.loads(r.stdout); rows = rows if isinstance(rows, list) else [rows]
+    return [(str(x.get("DeviceID")), str(x.get("Model") or "USB"), int(x.get("Size") or 0)) for x in rows]
 
+def refresh():
+    drives.delete(0, tk.END)
+    try: items = usb_drives()
+    except Exception as e:
+        messagebox.showerror("USB detection", str(e)); return
+    for device, model, size in items: drives.insert(tk.END, f"{device} | {model} | {size / 1_000_000_000:.2f} GB")
+    if not items: drives.insert(tk.END, "Aucune clé USB détectée")
 
-@dataclass(frozen=True)
-class UsbDrive:
-    model: str
-    size_bytes: int | None
-    device_id: str
+def create_usb():
+    if not ISO.is_file(): return messagebox.showerror("ISO introuvable", str(ISO))
+    selection = drives.curselection()
+    if not selection or not drives.get(selection[0]).startswith("\\\\.\\PHYSICALDRIVE"):
+        return messagebox.showwarning("Sélection requise", "Sélectionnez une clé USB détectée.")
+    device, model, size = usb_drives()[selection[0]]
+    if not messagebox.askyesno("ATTENTION", f"Toutes les données de {model} ({size / 1_000_000_000:.2f} GB) seront supprimées. Continuer ?"):
+        return
+    messagebox.showinfo("Étape protégée", "L’écriture USB sera activée après validation du flux de formatage.")
 
-    @property
-    def size_gb(self) -> float | None:
-        return None if self.size_bytes is None else round(self.size_bytes / 1_000_000_000, 2)
-
-
-def find_iso(project_root: Path) -> Path:
-    """Return the expected ISO path, whether or not it exists."""
-    return project_root / "output" / ISO_NAME
-
-
-def inspect_iso(project_root: Path) -> dict[str, object]:
-    path = find_iso(project_root)
-    return {
-        "path": str(path),
-        "exists": path.is_file(),
-        "size_bytes": path.stat().st_size if path.is_file() else None,
-    }
-
-
-def _powershell_command() -> list[str]:
-    query = (
-        "Get-WmiObject Win32_DiskDrive -Filter \"InterfaceType='USB'\" | "
-        "Select-Object Model,Size,DeviceID | ConvertTo-Json -Compress"
-    )
-    return ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query]
-
-
-def detect_usb_drives(runner=subprocess.run) -> list[UsbDrive]:
-    """Read USB disk metadata through Windows WMI; never opens a disk for writing."""
-    result = runner(_powershell_command(), capture_output=True, text=True, check=True)
-    if not result.stdout.strip():
-        return []
-    records = json.loads(result.stdout)
-    if isinstance(records, dict):
-        records = [records]
-    return [
-        UsbDrive(
-            model=str(record.get("Model") or "Unknown USB disk"),
-            size_bytes=int(record["Size"]) if record.get("Size") else None,
-            device_id=str(record.get("DeviceID") or "Unknown"),
-        )
-        for record in records
-    ]
-
-
-def format_bytes(size_bytes: int | None) -> str:
-    return "unknown" if size_bytes is None else f"{size_bytes / 1_000_000_000:.2f} GB"
-
-
-def print_report(project_root: Path, drives: Iterable[UsbDrive]) -> None:
-    iso = inspect_iso(project_root)
-    print(f"ISO: {iso['path']}")
-    print(f"  status: {'found' if iso['exists'] else 'missing'}")
-    print(f"  size: {format_bytes(iso['size_bytes'])}")
-    print("USB drives:")
-    drives = list(drives)
-    if not drives:
-        print("  none detected")
-    for drive in drives:
-        print(f"  - model: {drive.model}")
-        print(f"    size: {format_bytes(drive.size_bytes)}")
-        print(f"    id: {drive.device_id}")
-    print("Mode: read-only; no formatting or disk writes performed.")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Inspect recovery ISO and USB disks (read-only).")
-    parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parent)
-    args = parser.parse_args()
-    try:
-        print_report(args.project_root, detect_usb_drives())
-    except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as error:
-        parser.error(f"USB WMI query failed: {error}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+root = tk.Tk(); root.title("SUPER NOVA RECOVERY"); root.geometry("700x360")
+ttk.Label(root, text="SUPER NOVA RECOVERY", font=("Segoe UI", 18, "bold")).pack(pady=18)
+ttk.Label(root, text=f"ISO : {'trouvée' if ISO.is_file() else 'introuvable'}").pack()
+drives = tk.Listbox(root, width=90, height=8); drives.pack(pady=16)
+bar = ttk.Frame(root); bar.pack()
+ttk.Button(bar, text="Actualiser", command=refresh).pack(side=tk.LEFT, padx=6)
+ttk.Button(bar, text="Créer la clé", command=create_usb).pack(side=tk.LEFT, padx=6)
+refresh(); root.mainloop()
