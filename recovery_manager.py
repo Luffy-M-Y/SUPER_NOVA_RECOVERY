@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
+import tempfile
 import tkinter as tk
 from tkinter import messagebox, ttk
 from pathlib import Path
@@ -37,7 +39,57 @@ def create_usb():
     device, model, size = usb_drives()[selection[0]]
     if not messagebox.askyesno("ATTENTION", f"Toutes les données de {model} ({size / 1_000_000_000:.2f} GB) seront supprimées. Continuer ?"):
         return
-    messagebox.showinfo("Étape protégée", "L’écriture USB sera activée après validation du flux de formatage.")
+    if not messagebox.askyesno("CONFIRMATION FINALE", f"Confirmer le formatage de {device} et la création de la clé WinPE ?"):
+        return
+
+    temp_handle, temp_name = tempfile.mkstemp(prefix="supernova_recovery_", suffix=".iso")
+    os.close(temp_handle)
+    local_iso = Path(temp_name)
+    try:
+        shutil.copy2(ISO, local_iso)
+    except OSError as error:
+        return messagebox.showerror("ISO inaccessible", str(error))
+
+    iso_path = str(local_iso).replace("'", "''")
+    device_id = device.replace("'", "''")
+    ps = f"""
+$ErrorActionPreference = 'Stop'
+$iso = '{iso_path}'
+$device = '{device_id}'
+$usb = Get-CimInstance Win32_DiskDrive | Where-Object DeviceID -eq $device
+if (-not $usb -or $usb.InterfaceType -ne 'USB') {{ throw 'Le disque USB sélectionné est introuvable.' }}
+$disk = Get-Disk | Where-Object Number -eq $usb.Index
+if (-not $disk) {{ throw 'Disque USB introuvable.' }}
+$before = @(Get-CimInstance Win32_LogicalDisk -Filter "DriveType=5" | Select-Object -ExpandProperty DeviceID)
+$null = Mount-DiskImage -ImagePath $iso -PassThru
+Start-Sleep -Seconds 2
+$source = (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=5" | Where-Object DeviceID -notin $before | Select-Object -First 1).DeviceID + '\\'
+if (-not (Test-Path $source)) {{ throw 'ISO mount source not found.' }}
+Clear-Disk -Number $disk.Number -RemoveData -Confirm:$false
+if ($disk.PartitionStyle -eq 'RAW') {{ Initialize-Disk -Number $disk.Number -PartitionStyle GPT }}
+# Windows limite généralement le formatage FAT32 à environ 32 GB.
+$partition = New-Partition -DiskNumber $disk.Number -Size 30000000000 -AssignDriveLetter
+Format-Volume -Partition $partition -FileSystem FAT32 -NewFileSystemLabel 'SUPER_NOVA' -Confirm:$false
+$volume = Get-Volume -Partition $partition
+$target = $volume.DriveLetter + ':\\'
+Write-Host "ISO source: $source"
+Write-Host "USB target: $target"
+robocopy $source $target /E /R:1 /W:1 /NP
+if ($LASTEXITCODE -gt 7) {{ throw 'ISO copy failed.' }}
+Write-Host "Robocopy exit code: $LASTEXITCODE"
+if (-not (Test-Path (Join-Path $target 'sources\\boot.wim'))) {{ throw 'boot.wim was not copied to the USB.' }}
+Dismount-DiskImage -ImagePath $iso
+"""
+    try:
+        subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps], check=True)
+        messagebox.showinfo("Succès", "La clé WinPE a été créée. Vous pouvez maintenant la tester dans une VM.")
+    except subprocess.CalledProcessError as error:
+        messagebox.showerror("Échec", f"La création de la clé a échoué (code {error.returncode}).")
+    finally:
+        try:
+            local_iso.unlink()
+        except OSError:
+            pass
 
 root = tk.Tk(); root.title("SUPER NOVA RECOVERY"); root.geometry("700x360")
 ttk.Label(root, text="SUPER NOVA RECOVERY", font=("Segoe UI", 18, "bold")).pack(pady=18)
