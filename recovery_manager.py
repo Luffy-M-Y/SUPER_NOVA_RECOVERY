@@ -27,6 +27,13 @@ class OperationCancelled(RuntimeError):
     """Raised when the user cancels USB creation."""
 
 
+def is_admin() -> bool:
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except (AttributeError, OSError):
+        return False
+
+
 def usb_drives() -> list[tuple[str, str, int]]:
     query = (
         "Get-CimInstance Win32_DiskDrive -Filter \"InterfaceType='USB'\" | "
@@ -119,6 +126,15 @@ def copy_tree(source: Path, target: Path, progress, cancel_event: threading.Even
         completed += size
 
 
+def verify_boot_files(target: Path) -> list[str]:
+    required = (
+        target / "bootmgr",
+        target / "EFI" / "Microsoft" / "Boot" / "bootmgfw.efi",
+        target / "sources" / "boot.wim",
+    )
+    return [str(path.relative_to(target)) for path in required if not path.is_file()]
+
+
 def prepare_usb(device: str, status, progress, cancel_event: threading.Event) -> None:
     temp_handle, temp_name = tempfile.mkstemp(prefix="supernova_recovery_", suffix=".iso")
     os.close(temp_handle)
@@ -139,6 +155,7 @@ $usb = Get-CimInstance Win32_DiskDrive | Where-Object DeviceID -eq $device
 if (-not $usb -or $usb.InterfaceType -ne 'USB') {{ throw 'Le disque USB sélectionné est introuvable.' }}
 $disk = Get-Disk | Where-Object Number -eq $usb.Index
 if (-not $disk) {{ throw 'Disque USB introuvable.' }}
+if ($disk.IsSystem -or $disk.IsBoot) {{ throw 'Le disque sélectionné est un disque système ou de démarrage.' }}
 $null = Mount-DiskImage -ImagePath $iso -PassThru
 Start-Sleep -Seconds 2
 $volume = Get-DiskImage -ImagePath $iso | Get-Volume | Where-Object DriveLetter | Select-Object -First 1
@@ -171,9 +188,10 @@ Write-Output ($source + '|' + $target)
             raise OperationCancelled("Opération annulée.")
         status("Copie des fichiers")
         copy_tree(Path(source_name), Path(target_name), progress, cancel_event)
-        status("Vérification")
-        if not (Path(target_name) / "sources" / "boot.wim").is_file():
-            raise RuntimeError("boot.wim est absent de la clé USB.")
+        status("Vérification du démarrage")
+        missing = verify_boot_files(Path(target_name))
+        if missing:
+            raise RuntimeError("Fichiers bootables manquants : " + ", ".join(missing))
         progress(1.0)
         status("Terminé")
     except subprocess.CalledProcessError as error:
@@ -338,6 +356,12 @@ def cancel_operation() -> None:
 
 def create_usb() -> None:
     global operation_running
+    if not is_admin():
+        messagebox.showwarning(
+            "Droits administrateur requis",
+            "Lancez recovery_manager.py dans un terminal administrateur avant de créer une clé USB.",
+        )
+        return
     selection = drive_tree.selection()
     if not selection or selection[0] == "empty":
         messagebox.showwarning("Sélection requise", "Sélectionnez une clé USB détectée.")
