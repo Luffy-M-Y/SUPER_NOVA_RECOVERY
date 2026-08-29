@@ -199,75 +199,160 @@ Write-Output ($source + '|' + $target)
             pass
 
 
+COLORS = {
+    "bg": "#0B1220",
+    "panel": "#121C2E",
+    "panel_alt": "#17243A",
+    "border": "#263A59",
+    "text": "#EDF4FF",
+    "muted": "#9DB0CA",
+    "blue": "#4EA1FF",
+    "blue_dark": "#1E5EA8",
+    "green": "#32D583",
+    "red": "#F97068",
+}
+
+
 root = tk.Tk()
 root.title("SUPER NOVA RECOVERY")
-root.geometry("760x430")
+root.geometry("900x560")
+root.minsize(820, 520)
+root.configure(bg=COLORS["bg"])
 if ICON.is_file():
-    root.iconbitmap(str(ICON))
-ttk.Label(root, text="SUPER NOVA RECOVERY", font=("Segoe UI", 18, "bold")).pack(pady=18)
-ttk.Label(root, text=f"ISO : {'trouvée' if ISO.is_file() else 'introuvable'}").pack()
-drives = tk.Listbox(root, width=100, height=8)
-drives.pack(pady=16)
-controls = ttk.Frame(root)
-controls.pack()
-refresh_button = ttk.Button(controls, text="Actualiser")
-refresh_button.pack(side=tk.LEFT, padx=6)
-create_button = ttk.Button(controls, text="Créer la clé")
-create_button.pack(side=tk.LEFT, padx=6)
-cancel_button = ttk.Button(controls, text="Annuler", state=tk.DISABLED)
-cancel_button.pack(side=tk.LEFT, padx=6)
-close_button = ttk.Button(controls, text="Fermer", command=root.destroy, state=tk.DISABLED)
-close_button.pack(side=tk.LEFT, padx=6)
-status_label = ttk.Label(root, text="En attente")
-status_label.pack(pady=(18, 4))
-progress_bar = ttk.Progressbar(root, orient="horizontal", length=650, mode="determinate", maximum=100)
-progress_bar.pack()
+    try:
+        root.iconbitmap(str(ICON))
+    except tk.TclError:
+        pass
 
+style = ttk.Style(root)
+style.theme_use("clam")
+style.configure("App.TFrame", background=COLORS["bg"])
+style.configure("Panel.TFrame", background=COLORS["panel"])
+style.configure("Title.TLabel", background=COLORS["bg"], foreground=COLORS["text"], font=("Segoe UI", 22, "bold"))
+style.configure("Subtitle.TLabel", background=COLORS["bg"], foreground=COLORS["muted"], font=("Segoe UI", 10))
+style.configure("PanelTitle.TLabel", background=COLORS["panel"], foreground=COLORS["text"], font=("Segoe UI", 12, "bold"))
+style.configure("PanelText.TLabel", background=COLORS["panel"], foreground=COLORS["muted"], font=("Segoe UI", 9))
+style.configure("Status.TLabel", background=COLORS["bg"], foreground=COLORS["muted"], font=("Segoe UI", 10, "bold"))
+style.configure("Primary.TButton", background=COLORS["blue_dark"], foreground="white", padding=(18, 9), font=("Segoe UI", 10, "bold"), borderwidth=0)
+style.map("Primary.TButton", background=[("active", COLORS["blue"]), ("disabled", "#24324A")], foreground=[("disabled", "#71829B")])
+style.configure("Secondary.TButton", background=COLORS["panel_alt"], foreground=COLORS["text"], padding=(15, 9), font=("Segoe UI", 10), borderwidth=0)
+style.map("Secondary.TButton", background=[("active", COLORS["border"]), ("disabled", "#172033")], foreground=[("disabled", "#71829B")])
+style.configure("Danger.TButton", background="#642C38", foreground="#FFD9D5", padding=(15, 9), font=("Segoe UI", 10), borderwidth=0)
+style.map("Danger.TButton", background=[("active", "#8E3B4A"), ("disabled", "#242433")], foreground=[("disabled", "#71829B")])
+style.configure("Green.Horizontal.TProgressbar", troughcolor=COLORS["panel_alt"], background=COLORS["green"], lightcolor=COLORS["green"], darkcolor=COLORS["green"], bordercolor=COLORS["border"])
+style.configure("Modern.Treeview", background=COLORS["panel_alt"], fieldbackground=COLORS["panel_alt"], foreground=COLORS["text"], rowheight=34, borderwidth=0, font=("Segoe UI", 10))
+style.configure("Modern.Treeview.Heading", background=COLORS["border"], foreground=COLORS["text"], font=("Segoe UI", 9, "bold"), relief="flat", padding=8)
+style.map("Modern.Treeview", background=[("selected", COLORS["blue_dark"])], foreground=[("selected", "white")])
+
+container = ttk.Frame(root, style="App.TFrame", padding=(22, 18, 22, 16))
+container.pack(fill=tk.BOTH, expand=True)
+ttk.Label(container, text="SUPER NOVA RECOVERY", style="Title.TLabel").pack(anchor="w")
+ttk.Label(container, text="Créez une clé de récupération Windows en quelques étapes.", style="Subtitle.TLabel").pack(anchor="w", pady=(3, 20))
+
+iso_card = tk.Frame(container, bg=COLORS["panel"], highlightbackground=COLORS["border"], highlightthickness=1)
+iso_card.pack(fill=tk.X, pady=(0, 10))
+iso_inner = tk.Frame(iso_card, bg=COLORS["panel"])
+iso_inner.pack(fill=tk.X, padx=18, pady=13)
+tk.Label(iso_inner, text="●", fg=COLORS["green"] if ISO.is_file() else COLORS["red"], bg=COLORS["panel"], font=("Segoe UI", 13)).pack(side=tk.LEFT, padx=(0, 10))
+tk.Label(iso_inner, text="Image ISO", fg=COLORS["text"], bg=COLORS["panel"], font=("Segoe UI", 10, "bold")).pack(side=tk.LEFT)
+tk.Label(iso_inner, text="trouvée" if ISO.is_file() else "introuvable", fg=COLORS["green"] if ISO.is_file() else COLORS["red"], bg=COLORS["panel"], font=("Segoe UI", 10, "bold")).pack(side=tk.RIGHT)
+
+usb_card = tk.Frame(container, bg=COLORS["panel"], highlightbackground=COLORS["border"], highlightthickness=1)
+usb_card.pack(fill=tk.X)
+usb_header = tk.Frame(usb_card, bg=COLORS["panel"])
+usb_header.pack(fill=tk.X, padx=18, pady=(15, 10))
+ttk.Label(usb_header, text="1  Sélectionnez votre clé USB", style="PanelTitle.TLabel").pack(anchor="w")
+ttk.Label(usb_header, text="Toutes les données de la clé sélectionnée seront effacées.", style="PanelText.TLabel").pack(anchor="w", pady=(3, 0))
+
+table_frame = tk.Frame(usb_card, bg=COLORS["panel"])
+table_frame.pack(fill=tk.X, padx=18, pady=(0, 12))
+table_frame.configure(height=160)
+table_frame.pack_propagate(False)
+drive_tree = ttk.Treeview(table_frame, columns=("model", "size", "device"), show="headings", selectmode="browse", height=4, style="Modern.Treeview")
+drive_tree.heading("model", text="PÉRIPHÉRIQUE")
+drive_tree.heading("size", text="TAILLE")
+drive_tree.heading("device", text="IDENTIFIANT")
+drive_tree.column("model", width=280, anchor="w")
+drive_tree.column("size", width=110, anchor="center")
+drive_tree.column("device", width=270, anchor="w")
+drive_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=drive_tree.yview)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+drive_tree.configure(yscrollcommand=scrollbar.set)
+
+controls = ttk.Frame(container, style="App.TFrame")
+controls.pack(fill=tk.X, pady=(12, 9))
+refresh_button = ttk.Button(controls, text="Actualiser", style="Secondary.TButton")
+refresh_button.pack(side=tk.LEFT)
+create_button = ttk.Button(controls, text="Créer la clé", style="Primary.TButton")
+create_button.pack(side=tk.RIGHT)
+cancel_button = ttk.Button(controls, text="Annuler", style="Danger.TButton", state=tk.DISABLED)
+cancel_button.pack(side=tk.RIGHT, padx=(0, 10))
+close_button = ttk.Button(controls, text="Fermer", style="Secondary.TButton", command=root.destroy, state=tk.DISABLED)
+close_button.pack(side=tk.RIGHT, padx=(0, 10))
+
+status_label = ttk.Label(container, text="Prêt — sélectionnez une clé USB pour commencer.", style="Status.TLabel")
+status_label.pack(anchor="w", pady=(0, 5))
+progress_track = tk.Frame(container, bg=COLORS["panel_alt"], height=16, highlightbackground=COLORS["border"], highlightthickness=1)
+progress_track.pack(fill=tk.X)
+progress_track.pack_propagate(False)
+progress_fill = tk.Frame(progress_track, bg=COLORS["green"], height=14)
+progress_fill.place(x=0, y=0, relheight=1, width=0)
+tk.Label(container, text="SUPER NOVA fonctionne hors ligne. Vérifiez attentivement le périphérique sélectionné.", fg=COLORS["muted"], bg=COLORS["bg"], font=("Segoe UI", 8)).pack(anchor="w", pady=(8, 0))
+
+drive_items: list[tuple[str, str, int]] = []
 cancel_event = threading.Event()
 operation_running = False
 
 
+def set_progress(value: float) -> None:
+    value = max(0.0, min(1.0, value))
+    progress_fill.place_configure(relwidth=value)
+
+
 def refresh() -> None:
-    drives.delete(0, tk.END)
+    global drive_items
+    for item in drive_tree.get_children():
+        drive_tree.delete(item)
     try:
-        items = usb_drives()
+        drive_items = usb_drives()
     except Exception as error:
+        status_label.config(text="Impossible de détecter les clés USB.")
         messagebox.showerror("Détection USB", str(error))
         return
-    for device, model, size in items:
-        drives.insert(tk.END, f"{device} | {model} | {format_size(size)}")
-    if not items:
-        drives.insert(tk.END, "Aucune clé USB détectée")
+    for index, (device, model, size) in enumerate(drive_items):
+        drive_tree.insert("", tk.END, iid=str(index), values=(model, format_size(size), device))
+    if not drive_items:
+        drive_tree.insert("", tk.END, iid="empty", values=("Aucune clé USB détectée", "—", "—"))
+        status_label.config(text="Aucune clé USB détectée.")
+    else:
+        status_label.config(text=f"{len(drive_items)} clé(s) USB détectée(s). Sélectionnez-en une.")
 
 
 def cancel_operation() -> None:
     if operation_running:
         cancel_event.set()
         cancel_button.config(state=tk.DISABLED)
-        status_label.config(text="Annulation...")
+        status_label.config(text="Annulation en cours…")
 
 
 def create_usb() -> None:
     global operation_running
+    selection = drive_tree.selection()
+    if not selection or selection[0] == "empty":
+        messagebox.showwarning("Sélection requise", "Sélectionnez une clé USB détectée.")
+        return
+    index = int(selection[0])
+    if index >= len(drive_items):
+        messagebox.showwarning("Sélection invalide", "Actualisez la liste des clés USB.")
+        return
+    device, model, size = drive_items[index]
     if not ISO.is_file():
         messagebox.showerror("ISO introuvable", str(ISO))
         return
-    selection = drives.curselection()
-    if not selection or not drives.get(selection[0]).startswith("\\\\.\\PHYSICALDRIVE"):
-        messagebox.showwarning("Sélection requise", "Sélectionnez une clé USB détectée.")
+    if not messagebox.askyesno("Attention", f"Toutes les données de {model} ({format_size(size)}) seront supprimées. Continuer ?"):
         return
-    try:
-        items = usb_drives()
-    except Exception as error:
-        messagebox.showerror("Détection USB", str(error))
-        return
-    if selection[0] >= len(items):
-        messagebox.showwarning("Sélection invalide", "Actualisez la liste des clés USB.")
-        return
-    device, model, size = items[selection[0]]
-    if not messagebox.askyesno("ATTENTION", f"Toutes les données de {model} ({format_size(size)}) seront supprimées. Continuer ?"):
-        return
-    if not messagebox.askyesno("CONFIRMATION FINALE", f"Confirmer le formatage de {device} et la création de la clé WinPE ?"):
+    if not messagebox.askyesno("Confirmation finale", f"Formater {device} et créer la clé WinPE ?"):
         return
 
     operation_running = True
@@ -276,8 +361,8 @@ def create_usb() -> None:
     create_button.config(state=tk.DISABLED)
     cancel_button.config(state=tk.NORMAL)
     close_button.config(state=tk.DISABLED)
-    progress_bar.config(value=0)
-    status_label.config(text="Préparation")
+    set_progress(0)
+    status_label.config(text="Préparation…")
     threading.Thread(target=worker, args=(device,), daemon=True).start()
 
 
@@ -287,20 +372,20 @@ def worker(device: str) -> None:
         prepare_usb(
             device,
             lambda text: root.after(0, status_label.config, {"text": text}),
-            lambda value: root.after(0, progress_bar.config, {"value": value * 100}),
+            lambda value: root.after(0, set_progress, value),
             cancel_event,
         )
     except OperationCancelled as error:
-        root.after(0, status_label.config, {"text": "Annulée"})
+        root.after(0, status_label.config, {"text": "Opération annulée"})
         root.after(0, messagebox.showinfo, "Opération annulée", str(error))
     except Exception as error:
-        root.after(0, status_label.config, {"text": "Échec"})
+        root.after(0, status_label.config, {"text": "Échec de la création"})
         root.after(0, messagebox.showerror, "Échec", str(error))
     else:
-        root.after(0, status_label.config, {"text": "Terminé"})
-        root.after(0, progress_bar.config, {"value": 100})
+        root.after(0, status_label.config, {"text": "Clé créée avec succès"})
+        root.after(0, set_progress, 1.0)
         root.after(0, close_button.config, {"state": tk.NORMAL})
-        root.after(0, messagebox.showinfo, "Succès", "La clé WinPE a été créée.")
+        root.after(0, messagebox.showinfo, "Succès", "La clé WinPE a été créée avec succès.")
     finally:
         operation_running = False
         root.after(0, refresh_button.config, {"state": tk.NORMAL})
