@@ -60,10 +60,10 @@ $usb = Get-CimInstance Win32_DiskDrive | Where-Object DeviceID -eq $device
 if (-not $usb -or $usb.InterfaceType -ne 'USB') {{ throw 'Le disque USB sélectionné est introuvable.' }}
 $disk = Get-Disk | Where-Object Number -eq $usb.Index
 if (-not $disk) {{ throw 'Disque USB introuvable.' }}
-$before = @(Get-CimInstance Win32_LogicalDisk -Filter "DriveType=5" | Select-Object -ExpandProperty DeviceID)
 $null = Mount-DiskImage -ImagePath $iso -PassThru
 Start-Sleep -Seconds 2
-$source = (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=5" | Where-Object DeviceID -notin $before | Select-Object -First 1).DeviceID + '\\'
+$isoSize = (Get-Item $iso).Length
+$source = (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=5" | Where-Object Size -eq $isoSize | Select-Object -First 1).DeviceID + '\\'
 if (-not (Test-Path $source)) {{ throw 'ISO mount source not found.' }}
 Clear-Disk -Number $disk.Number -RemoveData -Confirm:$false
 if ($disk.PartitionStyle -eq 'RAW') {{ Initialize-Disk -Number $disk.Number -PartitionStyle GPT }}
@@ -74,7 +74,7 @@ $volume = Get-Volume -Partition $partition
 $target = $volume.DriveLetter + ':\\'
 Write-Host "ISO source: $source"
 Write-Host "USB target: $target"
-robocopy $source $target /E /R:1 /W:1 /NP
+robocopy $source $target /E /J /MT:8 /R:0 /W:0 /NFL /NDL /NP
 if ($LASTEXITCODE -gt 7) {{ throw 'ISO copy failed.' }}
 Write-Host "Robocopy exit code: $LASTEXITCODE"
 if (-not (Test-Path (Join-Path $target 'sources\\boot.wim'))) {{ throw 'boot.wim was not copied to the USB.' }}
@@ -86,6 +86,13 @@ Dismount-DiskImage -ImagePath $iso
     except subprocess.CalledProcessError as error:
         messagebox.showerror("Échec", f"La création de la clé a échoué (code {error.returncode}).")
     finally:
+        cleanup_path = str(local_iso).replace("'", "''")
+        subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+             f"Dismount-DiskImage -ImagePath '{cleanup_path}' -ErrorAction SilentlyContinue"],
+            capture_output=True, text=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
         try:
             local_iso.unlink()
         except OSError:
