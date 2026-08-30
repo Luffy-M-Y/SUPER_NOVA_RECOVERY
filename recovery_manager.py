@@ -377,15 +377,32 @@ def set_progress(value: float) -> None:
 
 
 def refresh() -> None:
+    """Refresh USB devices without blocking the Tkinter event loop."""
+    refresh_button.config(state=tk.DISABLED)
+    status_label.config(text="Détection des clés USB…")
+    threading.Thread(target=refresh_worker, daemon=True).start()
+
+
+def refresh_worker() -> None:
+    try:
+        drives = usb_drives()
+    except Exception as error:
+        root.after(0, refresh_error, error)
+        return
+    root.after(0, apply_drive_items, drives)
+
+
+def refresh_error(error: Exception) -> None:
+    refresh_button.config(state=tk.NORMAL)
+    status_label.config(text="Impossible de détecter les clés USB.")
+    messagebox.showerror("Détection USB", str(error))
+
+
+def apply_drive_items(drives: list[tuple[str, str, int]]) -> None:
     global drive_items
+    drive_items = drives
     for item in drive_tree.get_children():
         drive_tree.delete(item)
-    try:
-        drive_items = usb_drives()
-    except Exception as error:
-        status_label.config(text="Impossible de détecter les clés USB.")
-        messagebox.showerror("Détection USB", str(error))
-        return
     for index, (device, model, size) in enumerate(drive_items):
         drive_tree.insert("", tk.END, iid=str(index), values=(model, format_size(size), device))
     if not drive_items:
@@ -393,6 +410,7 @@ def refresh() -> None:
         status_label.config(text="Aucune clé USB détectée.")
     else:
         status_label.config(text=f"{len(drive_items)} clé(s) USB détectée(s). Sélectionnez-en une.")
+    refresh_button.config(state=tk.NORMAL)
 
 
 def load_iso_hash() -> None:
@@ -478,7 +496,7 @@ def worker(device: str) -> None:
 refresh_button.config(command=refresh)
 create_button.config(command=create_usb)
 cancel_button.config(command=cancel_operation)
-refresh()
+root.after(100, refresh)
 if ISO.is_file():
-    threading.Thread(target=load_iso_hash, daemon=True).start()
+    root.after(100, lambda: threading.Thread(target=load_iso_hash, daemon=True).start())
 root.mainloop()
