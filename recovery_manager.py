@@ -359,7 +359,7 @@ create_button = ttk.Button(controls, text="Créer la clé", style="Primary.TButt
 create_button.pack(side=tk.RIGHT)
 cancel_button = ttk.Button(controls, text="Annuler", style="Danger.TButton", state=tk.DISABLED)
 cancel_button.pack(side=tk.RIGHT, padx=(0, 10))
-close_button = ttk.Button(controls, text="Fermer", style="Secondary.TButton", command=root.destroy, state=tk.DISABLED)
+close_button = ttk.Button(controls, text="Fermer", style="Secondary.TButton", command=root.destroy)
 close_button.pack(side=tk.RIGHT, padx=(0, 10))
 
 status_label = ttk.Label(container, text="Prêt — sélectionnez une clé USB pour commencer.", style="Status.TLabel")
@@ -489,13 +489,13 @@ def worker(device: str) -> None:
     else:
         root.after(0, status_label.config, {"text": "Clé créée avec succès"})
         root.after(0, set_progress, 1.0)
-        root.after(0, close_button.config, {"state": tk.NORMAL})
         root.after(0, messagebox.showinfo, "Succès", "La clé WinPE a été créée avec succès.")
     finally:
         operation_running = False
         root.after(0, refresh_button.config, {"state": tk.NORMAL})
         root.after(0, create_button.config, {"state": tk.NORMAL})
         root.after(0, cancel_button.config, {"state": tk.DISABLED})
+        root.after(0, close_button.config, {"state": tk.NORMAL})
 
 
 refresh_button.config(command=refresh)
