@@ -258,7 +258,7 @@ COLORS = {
 root = tk.Tk()
 root.title("SUPER NOVA RECOVERY")
 root.geometry("900x640")
-root.minsize(820, 600)
+root.resizable(False, False)
 root.configure(bg=COLORS["bg"])
 if ICON.is_file():
     try:
@@ -284,6 +284,11 @@ style.map("Danger.TButton", background=[("active", "#8E3B4A"), ("disabled", "#24
 style.configure("Green.Horizontal.TProgressbar", troughcolor=COLORS["panel_alt"], background=COLORS["green"], lightcolor=COLORS["green"], darkcolor=COLORS["green"], bordercolor=COLORS["border"])
 style.configure("Modern.Treeview", background=COLORS["panel_alt"], fieldbackground=COLORS["panel_alt"], foreground=COLORS["text"], rowheight=34, borderwidth=0, font=("Segoe UI", 10))
 style.configure("Modern.Treeview.Heading", background=COLORS["border"], foreground=COLORS["text"], font=("Segoe UI", 9, "bold"), relief="flat", padding=8)
+style.map(
+    "Modern.Treeview.Heading",
+    background=[("active", COLORS["border"]), ("pressed", COLORS["border"])],
+    foreground=[("active", COLORS["text"]), ("pressed", COLORS["text"])],
+)
 style.map("Modern.Treeview", background=[("selected", COLORS["blue_dark"])], foreground=[("selected", "white")])
 
 container = ttk.Frame(root, style="App.TFrame", padding=(22, 18, 22, 16))
