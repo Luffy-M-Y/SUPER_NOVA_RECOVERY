@@ -941,6 +941,7 @@ function isSystemAccount(name) {
     var n = String(name).toLowerCase();
     return n === "administrateur" || n === "administrator" ||
         n === "invit\u00e9" || n === "invite" || n === "guest" ||
+        n.indexOf("invit") === 0 ||
         n === "defaultaccount" || n === "wdagutilityaccount" || n === "wsiaccount";
 }
 
